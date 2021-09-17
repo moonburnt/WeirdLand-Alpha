@@ -1,4 +1,4 @@
-from WGF import Scene, game, RGB, base, shared
+from WGF import Scene, game, RGB, base, shared, tree, clock
 from Game import entities
 from pygame import sprite, transform, Surface
 import logging
@@ -13,11 +13,7 @@ sc = Scene("intro")
 def init():
     # This will load and overwrite "romulus" font in storage
     # Also rescaling font right away
-    # sc.font = game.assets.load_font("./Assets/Fonts/romulus.ttf", 36)
-    sc.weapon = entities.Gun()
-    sc.enemy = entities.Enemy()
-    # Group of sprites to render together. Later appears above previous
-    sc.sprites = sprite.RenderPlain((sc.enemy, sc.weapon))
+    # shared.font = game.assets.load_font("./Assets/Fonts/romulus.ttf", 36)
     sc.background = Surface(game.screen.get_size()).convert()
     sc.background.fill(RGB(255, 255, 255))
 
@@ -25,7 +21,7 @@ def init():
 @sc.showmethod
 def show():
     # Setting up text, text's antialias and its position on screen
-    text = shared.font.render("Shoot Em All!", False, (10, 10, 10))
+    text = shared.font.render("Hello, World", False, (10, 10, 10))
     # Getting text's rectangle - local version of node - to drag/resize item
     textpos = text.get_rect()
     # This will set position to be the same as screen's center
@@ -42,18 +38,32 @@ def show():
     # Hiding game's mouse
     game.mouse.set_visible(False)
 
+    # Wipe out whats already visible with background
+    game.screen.blit(sc.background, (0, 0))
+
+    # Scheduling logo scene to auto skip to next one in 3 seconds
+    sc.time = 3000
+
 
 @sc.updatemethod
 def updater():
     for event in game.event_handler.events:
         if event.type == base.pgl.MOUSEBUTTONDOWN:
-            sc.weapon.attack(sc.enemy)
-        elif event.type == base.pgl.MOUSEBUTTONUP:
-            sc.weapon.pullback()
+            game.tree.switch("intro")
+            return
+            # sc.weapon.attack(sc.enemy)
+        # elif event.type == base.pgl.MOUSEBUTTONUP:
+        #    sc.weapon.pullback()
+
+    sc.time -= clock.get_time()
+    if sc.time > 0:
+        return
+
+    game.tree.switch("intro")
 
     # Update sprites position
-    sc.sprites.update()
+    # sc.sprites.update()
     # Wipe out whats already visible with background
-    game.screen.blit(sc.background, (0, 0))
+    # game.screen.blit(sc.background, (0, 0))
     # Draw updated sprites on top
-    sc.sprites.draw(game.screen)
+    # sc.sprites.draw(game.screen)
