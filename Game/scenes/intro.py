@@ -1,12 +1,29 @@
 from WGF import Scene, game, RGB, base, shared
+from WGF.tasks import TaskManager
 from Game import entities
 from pygame import sprite, transform, Surface
+from random import randint
 import logging
 
 log = logging.getLogger(__name__)
 
-# Scene blueprint
 sc = Scene("intro")
+# Initializing per-scene task manager, to avoid issues with spawning things while
+# game is paused
+sc.mgr = TaskManager()
+
+
+@sc.mgr.timed_task("spawn_enemies", 1000)
+def spawn():
+    log.debug("Attempting to spawn enemies")
+    if sc.enemy_counter <= 10:
+        x = game.screen.get_size()[0] - 100
+
+        enemy = entities.Enemy(
+            pos=(randint(100, x), 450),
+        )
+        sc.enemy_storage.append(enemy)
+        sc.enemy_counter += 1
 
 
 @sc.initmethod
@@ -15,11 +32,29 @@ def init():
     # Also rescaling font right away
     # sc.font = game.assets.load_font("./Assets/Fonts/romulus.ttf", 36)
     sc.weapon = entities.Gun()
-    sc.enemy = entities.Enemy()
+    # sc.enemy = entities.Enemy()
     # Group of sprites to render together. Later appears above previous
-    sc.sprites = sprite.RenderPlain((sc.enemy, sc.weapon))
+    # sc.sprites = sprite.RenderPlain((sc.enemy, sc.weapon))
+    sc.pointer = sprite.RenderPlain(sc.weapon)
     sc.background = Surface(game.screen.get_size()).convert()
     sc.background.fill(RGB(255, 255, 255))
+
+    sc.enemy_storage = []
+    sc.enemy_counter = 0
+
+    spawn()
+
+
+def remove_dead():
+    sc.enemy_storage = [e for e in sc.enemy_storage if e.alive]
+    sc.enemy_counter = len(sc.enemy_storage)
+
+
+# #TODO: turn this into timed task
+def update_enemies():
+    remove_dead()
+    # spawn()
+    sc.enemies = sprite.RenderPlain(sc.enemy_storage)
 
 
 @sc.showmethod
@@ -45,15 +80,20 @@ def show():
 
 @sc.updatemethod
 def updater():
+    sc.mgr.update()
+    update_enemies()
+
     for event in game.event_handler.events:
         if event.type == base.pgl.MOUSEBUTTONDOWN:
-            sc.weapon.attack(sc.enemy)
+            sc.weapon.attack(sc.enemy_storage)
         elif event.type == base.pgl.MOUSEBUTTONUP:
             sc.weapon.pullback()
 
     # Update sprites position
-    sc.sprites.update()
+    sc.enemies.update()
+    sc.pointer.update()
     # Wipe out whats already visible with background
     game.screen.blit(sc.background, (0, 0))
     # Draw updated sprites on top
-    sc.sprites.draw(game.screen)
+    sc.enemies.draw(game.screen)
+    sc.pointer.draw(game.screen)

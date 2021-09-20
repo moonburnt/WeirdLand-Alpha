@@ -25,9 +25,9 @@ class Enemy(Entity):
     scale: int = 4
     horizontal_speed: int = 4
     # Rotation angle. If not 0, character will start spinning
-    angle: int = 0
+    # angle: int = 0
 
-    def __init__(self):
+    def __init__(self, pos=(100, 450), hp: int = 1):
         # self.image = game.assets.images["enemy"]
         sheet = loader.Spritesheet(game.assets.images["enemy"])
         self.animation = Animation(sheet.get_sprites((32, 32)), scale=self.scale)
@@ -36,18 +36,15 @@ class Enemy(Entity):
 
         # Make it possible for entity to move around screen-sized area
         self.area = display.get_surface().get_rect()
-        # This will set position of creature to spawn on, from top left corner of
-        # creature's rectangle
-        self.rect.topleft = (10, 400)
-        # I have no idea how this works, probably underlying c shenanigans
-        # But basically this doesnt just reffer to self.image, but clone it
-        self.original = self.image
+        # This will set position of creature to spawn on
+        self.rect.center = pos
+
+        self.hp = hp
+        self.alive = True
 
     def update(self):
         """Make entity do different things, depending on current status effects"""
-        if self.angle:
-            self.spin()
-        else:
+        if self.alive:
             self.walk()
 
     def walk(self):
@@ -69,22 +66,13 @@ class Enemy(Entity):
 
         self.rect = pos
 
-    def spin(self):
-        """Spin enemy's img"""
-        center = self.rect.center
-        self.angle += 12
-        if self.angle >= 360:
-            self.angle = 0
-            self.image = self.original
-        else:
-            rotate = transform.rotate
-            self.image = rotate(self.original, self.angle)
-        self.rect = self.image.get_rect(center=center)
+    def get_damage(self, amount: int):
+        self.hp -= amount
+        if self.hp <= 0:
+            self.die()
 
-    def get_damage(self):
-        if not self.angle:
-            self.angle = 1
-            self.original = self.image
+    def die(self):
+        self.alive = False
 
 
 # #TODO: rework this into "weapon", make it serve as base for others
@@ -92,7 +80,7 @@ class Gun(sprite.Sprite):
     scale: int = 2
     attacking: bool = False
 
-    def __init__(self):
+    def __init__(self, damage: int = 1):
         sprites = loader.Spritesheet(game.assets.images["crosshairs"]).get_sprites(
             (16, 16)
         )
@@ -120,19 +108,24 @@ class Gun(sprite.Sprite):
         self.hit_sound = game.assets.sounds["hit"]
         self.miss_sound = game.assets.sounds["miss"]
 
+        self.damage = damage
+
     def update(self):
         self.rect.midtop = mouse.get_pos()
 
-    def attack(self, target: Enemy) -> bool:
+    def attack(self, targets: list) -> bool:
         """Attack target with weapon and check if collision has happend"""
         if self.attacking:
             return False
 
         self.attacking = True
-        if self.rect.colliderect(target.rect):
-            self.hit_sound.play()
-            target.get_damage()
-        else:
+        hit = False
+        for target in targets:
+            if self.rect.colliderect(target.rect):
+                self.hit_sound.play()
+                target.get_damage(self.damage)
+                hit = True
+        if not hit:
             self.miss_sound.play()
 
         self.image = self.sprites["attack"]
