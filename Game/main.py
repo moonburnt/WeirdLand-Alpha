@@ -7,7 +7,7 @@ log = logging.getLogger(__name__)
 
 def make_game() -> GameWindow:
     """Factory to create custom GameWindow"""
-    mygame = GameWindow("Test")
+    mygame = GameWindow("Whatever Shooting Game")
     assets_directory = join(".", "Assets")
     mygame.assets = AssetsLoader(
         assets_directory=assets_directory,
@@ -54,7 +54,6 @@ def make_game() -> GameWindow:
     # via these - say, fps counters
     @mg.postupdatemethod
     def postupdate():
-        # #TODO: this could be reworked into task
         if mg.show_fps:
             fps = mygame.clock.get_fps()
             text = shared.font.render(f"FPS: {fps:2.0f}", False, (10, 10, 10))
@@ -70,9 +69,9 @@ def make_game() -> GameWindow:
 
             mygame.screen.blit(mg.fps_bg, fps_pos)
 
-    from Game.scenes import logo, intro
+    from Game.scenes import logo, level
 
     mg.add(logo.sc, default=True)
-    mg.add(intro.sc)
+    mg.add(level.sc)
 
     return mygame

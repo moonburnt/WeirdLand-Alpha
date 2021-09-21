@@ -1,5 +1,5 @@
 from pygame import mouse, sprite, Surface, display, transform, Rect
-from WGF import game, loader
+from WGF import game, loader, shared
 from WGF.tasks import Animation
 import logging
 
@@ -68,6 +68,8 @@ class Enemy(Entity):
 
     def get_damage(self, amount: int):
         self.hp -= amount
+        # #TODO: maybe make it configurable?
+        shared.score += 10
         if self.hp <= 0:
             self.die()
 

@@ -7,7 +7,7 @@ import logging
 
 log = logging.getLogger(__name__)
 
-sc = Scene("intro")
+sc = Scene("level")
 # Initializing per-scene task manager, to avoid issues with spawning things while
 # game is paused
 sc.mgr = TaskManager()
@@ -28,19 +28,17 @@ def spawn():
 
 @sc.initmethod
 def init():
-    # This will load and overwrite "romulus" font in storage
-    # Also rescaling font right away
-    # sc.font = game.assets.load_font("./Assets/Fonts/romulus.ttf", 36)
     sc.weapon = entities.Gun()
-    # sc.enemy = entities.Enemy()
     # Group of sprites to render together. Later appears above previous
-    # sc.sprites = sprite.RenderPlain((sc.enemy, sc.weapon))
     sc.pointer = sprite.RenderPlain(sc.weapon)
     sc.background = Surface(game.screen.get_size()).convert()
     sc.background.fill(RGB(255, 255, 255))
 
     sc.enemy_storage = []
     sc.enemy_counter = 0
+
+    # Score is shared property, coz we update it from entity's methods
+    shared.score = 0
 
     spawn()
 
@@ -50,7 +48,6 @@ def remove_dead():
     sc.enemy_counter = len(sc.enemy_storage)
 
 
-# #TODO: turn this into timed task
 def update_enemies():
     remove_dead()
     # spawn()
@@ -78,6 +75,13 @@ def show():
     game.mouse.set_visible(False)
 
 
+def update_score():
+    text = shared.font.render(f" Score: {shared.score}", False, (10, 10, 10))
+    textpos = text.get_rect()
+    textpos.topleft = game.screen.get_rect().topleft
+    game.screen.blit(text, textpos)
+
+
 @sc.updatemethod
 def updater():
     sc.mgr.update()
@@ -97,3 +101,4 @@ def updater():
     # Draw updated sprites on top
     sc.enemies.draw(game.screen)
     sc.pointer.draw(game.screen)
+    update_score()
