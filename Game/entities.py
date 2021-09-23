@@ -26,12 +26,9 @@ def enemy(cls):
 
 
 class Entity(sprite.Sprite):
-    def __init__(self, pos: Point, hp: int):
+    def __init__(self, pos: Point):
         super().__init__()
         self.rect = self.image.get_rect()
-
-        self.hp = hp
-        self.alive = True
 
         self.set_pos(pos)
 
@@ -42,6 +39,14 @@ class Entity(sprite.Sprite):
         self.pos = pos
         self.rect.x = shared.camera_offset.x + self.pos.x
         self.rect.y = shared.camera_offset.y + self.pos.y
+
+
+class Creature(Entity):
+    def __init__(self, pos: Point, hp: int):
+        super().__init__(pos=pos)
+
+        self.hp = hp
+        self.alive = True
 
     def get_damage(self, amount: int):
         self.hp -= amount
@@ -54,8 +59,23 @@ class Entity(sprite.Sprite):
         self.alive = False
 
 
+class Grass(Entity):
+    scale: int = 4
+
+    def __init__(self, pos: Point):
+        self.image = game.assets.images["grass"]
+
+        if self.scale:
+            size = self.image.get_size()
+            x = size[0] * self.scale
+            y = size[1] * self.scale
+            self.image = transform.scale(self.image, (x, y))
+
+        super().__init__(pos=pos)
+
+
 @enemy
-class Dummy(Entity):
+class Dummy(Creature):
     scale: int = 4
 
     def __init__(self, pos: Point, hp: int = 1):
@@ -71,7 +91,7 @@ class Dummy(Entity):
 
 
 @enemy
-class Walker(Entity):
+class Walker(Creature):
     scale: int = 4
     horizontal_speed: int = 4
 
@@ -92,15 +112,15 @@ class Walker(Entity):
     def walk(self):
         """Make entity walk across the screen and turn at its corners"""
 
-        new_x = self.pos.x + self.horizontal_speed*self.direction.value
+        new_x = self.pos.x + self.horizontal_speed * self.direction.value
 
-        if new_x > shared.bg_size.width-150:
+        if new_x > shared.bg_size.width - 150:
             self.direction = Direction.left
-            new_x = self.pos.x + self.horizontal_speed*self.direction.value
+            new_x = self.pos.x + self.horizontal_speed * self.direction.value
             self.animation.flip(horizontally=True)
         elif new_x < 0:
             self.direction = Direction.right
-            new_x = self.pos.x + self.horizontal_speed*self.direction.value
+            new_x = self.pos.x + self.horizontal_speed * self.direction.value
             self.animation.flip(horizontally=True)
 
         self.set_pos(Point(new_x, self.pos.y))

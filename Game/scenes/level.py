@@ -4,6 +4,7 @@ from Game import entities
 from pygame import sprite, transform, Surface
 from random import randint, choice
 from enum import Enum
+from math import ceil
 import logging
 
 log = logging.getLogger(__name__)
@@ -30,7 +31,7 @@ def spawn():
             randint(0, sc.bg_size.width - 150),
             # #TODO: I should probably make height's offset dynamic, based on
             # window's height - to provide same results with different resolutions
-            sc.bg_pos.bottom - 200,
+            sc.bg_pos.bottom - 220,
         )
         enemy_type = choice(list(entities.enemies))
         log.debug(f"Spawning {enemy_type} at {pos}")
@@ -50,7 +51,8 @@ def init():
     # This will be used to calculate maximum allowed camera offset to right
     sc.screen_diff = sc.bg_size.width - game.screen.get_rect().width
 
-    sc.background.fill(RGB(255, 255, 255))
+    # sc.background.fill(RGB(255, 255, 255))
+    sc.background.fill(RGB.from_hex("cbdbfc"))
     sc.bg_pos = sc.background.get_rect()
     sc.bg_pos.center = game.screen.get_rect().center
 
@@ -79,6 +81,24 @@ def update_enemies():
     sc.enemies = sprite.RenderPlain(sc.enemy_storage)
 
 
+def spawn_grass():
+    grass_x = 64 * 4  # size*scale
+    amount = ceil(sc.bg_size.width / grass_x)
+    y = sc.bg_pos.bottom - 200
+    bg_y = sc.bg_pos.bottom - 300
+
+    grass = []
+    bg_grass = []
+    # for y in (sc.bg_pos.bottom - 150, sc.bg_pos.bottom - 120):
+    for pos in range(0, amount):
+        x = grass_x * pos
+        grass.append(entities.Grass(Point(x, y)))
+        bg_grass.append(entities.Grass(Point(x, bg_y)))
+
+    sc.grass = sprite.RenderPlain(grass)
+    sc.bg_grass = sprite.RenderPlain(bg_grass)
+
+
 @sc.showmethod
 def show():
     # Setting up text, text's antialias and its position on screen
@@ -96,8 +116,7 @@ def show():
     # which I didnt encounter yet
     sc.background.blit(text, textpos)
 
-    # Hiding game's mouse
-    game.mouse.set_visible(False)
+    spawn_grass()
 
 
 def update_score():
@@ -139,9 +158,13 @@ def updater():
     # Update sprites position
     sc.enemies.update()
     sc.pointer.update()
+    sc.bg_grass.update()
+    sc.grass.update()
     # Wipe out whats already visible with background
     game.screen.blit(sc.background, shared.camera_offset)
     # Draw updated sprites on top
+    sc.bg_grass.draw(game.screen)
     sc.enemies.draw(game.screen)
+    sc.grass.draw(game.screen)
     sc.pointer.draw(game.screen)
     update_score()

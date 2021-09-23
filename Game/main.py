@@ -1,4 +1,4 @@
-from WGF import GameWindow, base, RGB, AssetsLoader
+from WGF import GameWindow, base, RGB, Size, AssetsLoader
 from os.path import join
 import logging
 
@@ -32,10 +32,21 @@ def make_game() -> GameWindow:
 
     mg = mygame.tree
 
+    def show_pause_msg():
+        text = shared.font.render("PAUSED", False, (10, 10, 10))
+        textpos = text.get_rect()
+        gr = mygame.screen.get_rect()
+        textpos.centerx = gr.centerx
+        textpos.centery = gr.centery
+        frame = Surface(Size(108, 32)).convert()
+        frame.fill(RGB.from_hex("3f3f74"))
+        mygame.screen.blit(frame, textpos)
+        mygame.screen.blit(text, textpos)
+
     @mg.initmethod
     def init():
         mg.show_fps = True
-        mg.fps_bg = None
+        mg.game_paused = False
 
     # Modifying tree's updatemethod to implement pause support
     @mg.updatemethod
@@ -46,28 +57,26 @@ def make_game() -> GameWindow:
                     if mg._current_child:
                         if mg._current_child.playing:
                             mg._current_child.pause()
+                            mg.game_paused = True
                         else:
                             mg._current_child.play()
+                            mg.game_paused = False
 
     # Postupdate methods run within update cycle, but after child's tasks
     # This makes it possible to draw things that should appear on top of everything
     # via these - say, fps counters
     @mg.postupdatemethod
     def postupdate():
-        if mg.show_fps:
+        if mg.show_fps and not mg.game_paused:
             fps = mygame.clock.get_fps()
             text = shared.font.render(f"FPS: {fps:2.0f}", False, (10, 10, 10))
             textpos = text.get_rect()
 
-            if not mg.fps_bg or mg.fps_bg.get_rect() < textpos:
-                mg.fps_bg = Surface((textpos.w, textpos.h))
+            textpos.topright = mygame.screen.get_rect().topright
+            mygame.screen.blit(text, textpos)
 
-            fps_pos = mg.fps_bg.get_rect()
-            fps_pos.topright = mygame.screen.get_rect().topright
-            mg.fps_bg.fill(RGB(255, 255, 255))
-            mg.fps_bg.blit(text, textpos)
-
-            mygame.screen.blit(mg.fps_bg, fps_pos)
+        if mg.game_paused:
+            show_pause_msg()
 
     from Game.scenes import logo, level
 

@@ -43,6 +43,8 @@ def updater():
             game.tree.switch("level")
             return
 
+    game.screen.blit(sc.background, (0, 0))
+
     sc.time -= clock.get_time()
     if sc.time > 0:
         return
