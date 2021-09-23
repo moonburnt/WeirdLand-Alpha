@@ -1,70 +1,47 @@
 from pygame import mouse, sprite, Surface, display, transform, Rect
-from WGF import game, loader, shared
+from WGF import game, loader, shared, Point
 from WGF.tasks import Animation
+from enum import Enum
 import logging
 
 log = logging.getLogger(__name__)
 
 
+class Direction(Enum):
+    left: int = -1
+    right: int = 1
+
+
+enemies = {}
+
+
+def enemy(cls):
+    name = cls.__name__
+    enemies[name] = cls
+
+    def inner(*args, **kwargs):
+        return enemies[name](*args, **kwargs)
+
+    return inner
+
+
 class Entity(sprite.Sprite):
-    # scale = 0
-
-    def __init__(self):
+    def __init__(self, pos: Point, hp: int):
         super().__init__()
-        # print(self.scale)
-        # if self.scale:
-        #     size = self.image.get_size()
-        #     x = size[0] * self.scale
-        #     y = size[1] * self.scale
-        #     self.image = transform.scale(self.image, (x, y))
-
         self.rect = self.image.get_rect()
-
-
-class Enemy(Entity):
-    scale: int = 4
-    horizontal_speed: int = 4
-    # Rotation angle. If not 0, character will start spinning
-    # angle: int = 0
-
-    def __init__(self, pos=(100, 450), hp: int = 1):
-        # self.image = game.assets.images["enemy"]
-        sheet = loader.Spritesheet(game.assets.images["enemy"])
-        self.animation = Animation(sheet.get_sprites((32, 32)), scale=self.scale)
-        self.image = self.animation[0]
-        super().__init__()
-
-        # Make it possible for entity to move around screen-sized area
-        self.area = display.get_surface().get_rect()
-        # This will set position of creature to spawn on
-        self.rect.center = pos
 
         self.hp = hp
         self.alive = True
 
+        self.set_pos(pos)
+
     def update(self):
-        """Make entity do different things, depending on current status effects"""
-        if self.alive:
-            self.walk()
+        self.set_pos(self.pos)
 
-    def walk(self):
-        """Make entity walk across the screen and turn at its corners"""
-        # For now it can only move horizontally
-        pos = self.rect.move((self.horizontal_speed, 0))
-        # Ensuring new position wouldnt be out of screen's bounds
-        # For now, only checks for horizontal "out of bounds" situations
-        if not self.area.contains(pos):
-            self.horizontal_speed = -self.horizontal_speed
-            pos = self.rect.move((self.horizontal_speed, 0))
-            # This will flip image horizontally
-            self.animation.flip(horizontally=True)
-            # self.image = transform.flip(self.image, True, False)
-
-        nxt = self.animation.next()
-        if nxt:
-            self.image = nxt
-
-        self.rect = pos
+    def set_pos(self, pos: Point):
+        self.pos = pos
+        self.rect.x = shared.camera_offset.x + self.pos.x
+        self.rect.y = shared.camera_offset.y + self.pos.y
 
     def get_damage(self, amount: int):
         self.hp -= amount
@@ -75,6 +52,62 @@ class Enemy(Entity):
 
     def die(self):
         self.alive = False
+
+
+@enemy
+class Dummy(Entity):
+    scale: int = 4
+
+    def __init__(self, pos: Point, hp: int = 1):
+        self.image = game.assets.images["dummy"]
+
+        if self.scale:
+            size = self.image.get_size()
+            x = size[0] * self.scale
+            y = size[1] * self.scale
+            self.image = transform.scale(self.image, (x, y))
+
+        super().__init__(pos=pos, hp=hp)
+
+
+@enemy
+class Walker(Entity):
+    scale: int = 4
+    horizontal_speed: int = 4
+
+    def __init__(self, pos: Point, hp: int = 1):
+        sheet = loader.Spritesheet(game.assets.images["enemy"])
+        self.animation = Animation(sheet.get_sprites((32, 32)), scale=self.scale)
+        self.image = self.animation[0]
+        super().__init__(pos=pos, hp=hp)
+
+        self.direction = Direction.right
+
+    def update(self):
+        """Make entity do different things, depending on current status effects"""
+        super().update()
+        if self.alive:
+            self.walk()
+
+    def walk(self):
+        """Make entity walk across the screen and turn at its corners"""
+
+        new_x = self.pos.x + self.horizontal_speed*self.direction.value
+
+        if new_x > shared.bg_size.width-150:
+            self.direction = Direction.left
+            new_x = self.pos.x + self.horizontal_speed*self.direction.value
+            self.animation.flip(horizontally=True)
+        elif new_x < 0:
+            self.direction = Direction.right
+            new_x = self.pos.x + self.horizontal_speed*self.direction.value
+            self.animation.flip(horizontally=True)
+
+        self.set_pos(Point(new_x, self.pos.y))
+
+        nxt = self.animation.next()
+        if nxt:
+            self.image = nxt
 
 
 # #TODO: rework this into "weapon", make it serve as base for others

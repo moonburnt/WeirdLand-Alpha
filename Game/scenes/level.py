@@ -1,11 +1,19 @@
-from WGF import Scene, game, RGB, base, shared
+from WGF import Scene, game, RGB, base, shared, Size, Point
 from WGF.tasks import TaskManager
 from Game import entities
 from pygame import sprite, transform, Surface
-from random import randint
+from random import randint, choice
+from enum import Enum
 import logging
 
 log = logging.getLogger(__name__)
+
+
+class MoveCamera(Enum):
+    left: int = 10
+    right: int = -10
+    stop: int = 0
+
 
 sc = Scene("level")
 # Initializing per-scene task manager, to avoid issues with spawning things while
@@ -17,11 +25,16 @@ sc.mgr = TaskManager()
 def spawn():
     log.debug("Attempting to spawn enemies")
     if sc.enemy_counter <= 10:
-        x = game.screen.get_size()[0] - 100
-
-        enemy = entities.Enemy(
-            pos=(randint(100, x), 450),
+        pos = Point(
+            # This should solve the issue with enemies spawning outside of screen
+            randint(0, sc.bg_size.width - 150),
+            # #TODO: I should probably make height's offset dynamic, based on
+            # window's height - to provide same results with different resolutions
+            sc.bg_pos.bottom - 200,
         )
+        enemy_type = choice(list(entities.enemies))
+        log.debug(f"Spawning {enemy_type} at {pos}")
+        enemy = entities.enemies[enemy_type](pos=pos)
         sc.enemy_storage.append(enemy)
         sc.enemy_counter += 1
 
@@ -31,16 +44,28 @@ def init():
     sc.weapon = entities.Gun()
     # Group of sprites to render together. Later appears above previous
     sc.pointer = sprite.RenderPlain(sc.weapon)
-    sc.background = Surface(game.screen.get_size()).convert()
+
+    sc.bg_size = Size(2560, 720)
+    sc.background = Surface(sc.bg_size).convert()
+    # This will be used to calculate maximum allowed camera offset to right
+    sc.screen_diff = sc.bg_size.width - game.screen.get_rect().width
+
     sc.background.fill(RGB(255, 255, 255))
+    sc.bg_pos = sc.background.get_rect()
+    sc.bg_pos.center = game.screen.get_rect().center
 
     sc.enemy_storage = []
     sc.enemy_counter = 0
 
-    # Score is shared property, coz we update it from entity's methods
+    sc.camera_direction = MoveCamera.stop
+
+    # Sharing vars that will be accessed from entity module
+    shared.camera_offset = Point(0, 0)
     shared.score = 0
+    shared.bg_size = sc.bg_size
 
     spawn()
+    move_cam()
 
 
 def remove_dead():
@@ -82,22 +107,40 @@ def update_score():
     game.screen.blit(text, textpos)
 
 
+@sc.mgr.task("move_camera")
+def move_cam():
+    if sc.camera_direction:
+        new_x = shared.camera_offset.x + sc.camera_direction.value
+        if -sc.screen_diff <= new_x <= 0:
+            shared.camera_offset.x = new_x
+
+
 @sc.updatemethod
 def updater():
-    sc.mgr.update()
-    update_enemies()
-
     for event in game.event_handler.events:
         if event.type == base.pgl.MOUSEBUTTONDOWN:
             sc.weapon.attack(sc.enemy_storage)
         elif event.type == base.pgl.MOUSEBUTTONUP:
             sc.weapon.pullback()
 
+        if event.type == base.pgl.KEYDOWN:
+            if event.key == base.pgl.K_d:
+                sc.camera_direction = MoveCamera.right
+            elif event.key == base.pgl.K_a:
+                sc.camera_direction = MoveCamera.left
+
+        if event.type == base.pgl.KEYUP:
+            if event.key == base.pgl.K_d or event.key == base.pgl.K_a:
+                sc.camera_direction = MoveCamera.stop
+
+    sc.mgr.update()
+    update_enemies()
+
     # Update sprites position
     sc.enemies.update()
     sc.pointer.update()
     # Wipe out whats already visible with background
-    game.screen.blit(sc.background, (0, 0))
+    game.screen.blit(sc.background, shared.camera_offset)
     # Draw updated sprites on top
     sc.enemies.draw(game.screen)
     sc.pointer.draw(game.screen)
