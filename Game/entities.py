@@ -33,9 +33,15 @@ def rescale(img: Surface, scale: int) -> Surface:
 
 
 class Entity(sprite.Sprite):
-    def __init__(self, pos: Point):
+    def __init__(self, pos: Point, distance: float = 1.0):
         super().__init__()
         self.rect = self.image.get_rect()
+        # Distance means distance from camera. Its float that should (under normal
+        # circuimstances) be between 0.0 and 1.0.
+        # 0.0 means entity's position is unaffected by camera, 1.0 - that it
+        # moves together with camera. Its not recommended to set non-default
+        # distance to moving targets tho
+        self.distance = distance
 
         self.set_pos(pos)
 
@@ -44,21 +50,22 @@ class Entity(sprite.Sprite):
 
     def set_pos(self, pos: Point):
         self.pos = pos
-        self.rect.x = shared.camera_offset.x + self.pos.x
-        self.rect.y = shared.camera_offset.y + self.pos.y
+        self.rect.x = int(shared.camera_offset.x * self.distance + self.pos.x)
+        self.rect.y = int(shared.camera_offset.y * self.distance + self.pos.y)
 
 
 class Creature(Entity):
-    def __init__(self, pos: Point, hp: int):
-        super().__init__(pos=pos)
+    def __init__(self, pos: Point, hp: int, distance: float = 1.0, score: int = 10):
+        super().__init__(pos=pos, distance=distance)
 
         self.hp = hp
         self.alive = True
+        # This reffers to reward granted to player for killing creature
+        self.score = score
 
     def get_damage(self, amount: int):
         self.hp -= amount
-        # #TODO: maybe make it configurable?
-        shared.score += 10
+        shared.score += self.score
         if self.hp <= 0:
             self.die()
 
@@ -72,13 +79,15 @@ class Grass(Entity):
     def __init__(self, pos: Point, bg: bool = False):
         if bg:
             self.image = game.assets.images["grass_bg"]
+            distance = 0.9
         else:
             self.image = game.assets.images["grass"]
+            distance = 1
 
         if self.scale:
             self.image = rescale(self.image, self.scale)
 
-        super().__init__(pos=pos)
+        super().__init__(pos=pos, distance=distance)
 
 
 class Mountains(Entity):
@@ -90,7 +99,7 @@ class Mountains(Entity):
         if self.scale:
             self.image = rescale(self.image, self.scale)
 
-        super().__init__(pos=pos)
+        super().__init__(pos=pos, distance=0.3)
 
 
 @enemy
@@ -103,7 +112,7 @@ class Dummy(Creature):
         if self.scale:
             self.image = rescale(self.image, self.scale)
 
-        super().__init__(pos=pos, hp=hp)
+        super().__init__(pos=pos, hp=hp, score=5)
 
 
 @enemy
@@ -115,7 +124,7 @@ class Walker(Creature):
         sheet = loader.Spritesheet(game.assets.images["enemy"])
         self.animation = Animation(sheet.get_sprites((32, 32)), scale=self.scale)
         self.image = self.animation[0]
-        super().__init__(pos=pos, hp=hp)
+        super().__init__(pos=pos, hp=hp, score=10)
 
         self.direction = Direction.right
 
@@ -191,11 +200,16 @@ class Gun(sprite.Sprite):
 
         self.attacking = True
         hit = False
-        for target in targets:
+        # Its reversed coz newer entities appear under older, so their hitbox
+        # will count for hit first
+        for target in reversed(targets):
             if self.rect.colliderect(target.rect):
                 self.hit_sound.play()
                 target.get_damage(self.damage)
                 hit = True
+                # #TODO: make this break configurable, to allow some weapons to
+                # pierce enemies
+                break
         if not hit:
             self.miss_sound.play()
 
