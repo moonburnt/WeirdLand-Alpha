@@ -25,6 +25,13 @@ def enemy(cls):
     return inner
 
 
+def rescale(img: Surface, scale: int) -> Surface:
+    size = img.get_size()
+    x = size[0] * scale
+    y = size[1] * scale
+    return transform.scale(img, (x, y))
+
+
 class Entity(sprite.Sprite):
     def __init__(self, pos: Point):
         super().__init__()
@@ -62,14 +69,26 @@ class Creature(Entity):
 class Grass(Entity):
     scale: int = 4
 
-    def __init__(self, pos: Point):
-        self.image = game.assets.images["grass"]
+    def __init__(self, pos: Point, bg: bool = False):
+        if bg:
+            self.image = game.assets.images["grass_bg"]
+        else:
+            self.image = game.assets.images["grass"]
 
         if self.scale:
-            size = self.image.get_size()
-            x = size[0] * self.scale
-            y = size[1] * self.scale
-            self.image = transform.scale(self.image, (x, y))
+            self.image = rescale(self.image, self.scale)
+
+        super().__init__(pos=pos)
+
+
+class Mountains(Entity):
+    scale: int = 4
+
+    def __init__(self, pos: Point):
+        self.image = game.assets.images["mountains"]
+
+        if self.scale:
+            self.image = rescale(self.image, self.scale)
 
         super().__init__(pos=pos)
 
@@ -82,10 +101,7 @@ class Dummy(Creature):
         self.image = game.assets.images["dummy"]
 
         if self.scale:
-            size = self.image.get_size()
-            x = size[0] * self.scale
-            y = size[1] * self.scale
-            self.image = transform.scale(self.image, (x, y))
+            self.image = rescale(self.image, self.scale)
 
         super().__init__(pos=pos, hp=hp)
 

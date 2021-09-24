@@ -46,12 +46,11 @@ def init():
     # Group of sprites to render together. Later appears above previous
     sc.pointer = sprite.RenderPlain(sc.weapon)
 
+    # setup_bg()
     sc.bg_size = Size(2560, 720)
     sc.background = Surface(sc.bg_size).convert()
     # This will be used to calculate maximum allowed camera offset to right
     sc.screen_diff = sc.bg_size.width - game.screen.get_rect().width
-
-    # sc.background.fill(RGB(255, 255, 255))
     sc.background.fill(RGB.from_hex("cbdbfc"))
     sc.bg_pos = sc.background.get_rect()
     sc.bg_pos.center = game.screen.get_rect().center
@@ -77,46 +76,46 @@ def remove_dead():
 
 def update_enemies():
     remove_dead()
-    # spawn()
     sc.enemies = sprite.RenderPlain(sc.enemy_storage)
 
 
-def spawn_grass():
-    grass_x = 64 * 4  # size*scale
-    amount = ceil(sc.bg_size.width / grass_x)
-    y = sc.bg_pos.bottom - 200
-    bg_y = sc.bg_pos.bottom - 300
+def fill_bg_horizontally(
+    entity, entity_x: int, y: int, entity_kwargs: dict = {}
+) -> sprite.RenderPlain:
+    amount = ceil(sc.bg_size.width / entity_x)
 
-    grass = []
-    bg_grass = []
-    # for y in (sc.bg_pos.bottom - 150, sc.bg_pos.bottom - 120):
+    items = []
     for pos in range(0, amount):
-        x = grass_x * pos
-        grass.append(entities.Grass(Point(x, y)))
-        bg_grass.append(entities.Grass(Point(x, bg_y)))
+        x = entity_x * pos
+        items.append(entity(Point(x, y), **entity_kwargs))
 
-    sc.grass = sprite.RenderPlain(grass)
-    sc.bg_grass = sprite.RenderPlain(bg_grass)
+    return sprite.RenderPlain(items)
+
+
+def set_environment():
+    sc.grass = fill_bg_horizontally(
+        entity=entities.Grass,
+        entity_x=(64 * 4),  # size*scale
+        y=(sc.bg_pos.bottom - 200),
+    )
+
+    sc.bg_grass = fill_bg_horizontally(
+        entity=entities.Grass,
+        entity_x=(64 * 4),
+        y=(sc.bg_pos.bottom - 300),
+        entity_kwargs={"bg": True},
+    )
+
+    sc.mountains = fill_bg_horizontally(
+        entity=entities.Mountains,
+        entity_x=(256 * 4),
+        y=(sc.bg_pos.bottom - 600),
+    )
 
 
 @sc.showmethod
 def show():
-    # Setting up text, text's antialias and its position on screen
-    text = shared.font.render("Shoot Em All!", False, (10, 10, 10))
-    # Getting text's rectangle - local version of node - to drag/resize item
-    textpos = text.get_rect()
-    # This will set position to be the same as screen's center
-    textpos.centerx = sc.background.get_rect().centerx
-    textpos.centery = sc.background.get_rect().centery
-    # "blit()" is local equal of "render". It will show provided items on screen
-    # However there is a huge and important difference between how these work.
-    # blit() is kind of low-level stuff that copy one object's pixels on top of
-    # another. To drag object around, you'd do that each frame, which is kinda
-    # resource-consuming. So yeah - there are "best practices" to how to use it,
-    # which I didnt encounter yet
-    sc.background.blit(text, textpos)
-
-    spawn_grass()
+    set_environment()
 
 
 def update_score():
@@ -156,6 +155,7 @@ def updater():
     update_enemies()
 
     # Update sprites position
+    sc.mountains.update()
     sc.enemies.update()
     sc.pointer.update()
     sc.bg_grass.update()
@@ -163,6 +163,7 @@ def updater():
     # Wipe out whats already visible with background
     game.screen.blit(sc.background, shared.camera_offset)
     # Draw updated sprites on top
+    sc.mountains.draw(game.screen)
     sc.bg_grass.draw(game.screen)
     sc.enemies.draw(game.screen)
     sc.grass.draw(game.screen)
