@@ -4,6 +4,8 @@ import logging
 
 log = logging.getLogger(__name__)
 
+SETTINGS_PATH = join(".", "settings.toml")
+
 
 def make_game() -> GameWindow:
     """Factory to create custom GameWindow"""
@@ -18,7 +20,11 @@ def make_game() -> GameWindow:
         image_extensions=[".png"],
         sound_extensions=[".wav"],
     )
-    mygame.settings["vsync"] = True
+    # Overriding some built-in defaults and adding new
+    mygame.settings.set_default("vsync", True)
+    mygame.settings.set_default("show_fps", False)
+    mygame.icon_path = join(".", "icon.png")
+    mygame.settings.from_toml(SETTINGS_PATH)
     mygame.init()
 
     mygame.assets.load_all()
@@ -45,7 +51,6 @@ def make_game() -> GameWindow:
 
     @mg.initmethod
     def init():
-        mg.show_fps = True
         mg.game_paused = False
 
     # Modifying tree's updatemethod to implement pause support
@@ -67,7 +72,7 @@ def make_game() -> GameWindow:
     # via these - say, fps counters
     @mg.postupdatemethod
     def postupdate():
-        if mg.show_fps and not mg.game_paused:
+        if mygame.settings["show_fps"] and not mg.game_paused:
             fps = mygame.clock.get_fps()
             text = shared.font.render(f"FPS: {fps:2.0f}", False, (10, 10, 10))
             textpos = text.get_rect()
