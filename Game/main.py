@@ -23,6 +23,14 @@ def make_game() -> GameWindow:
     # Overriding some built-in defaults and adding new
     mygame.settings.set_default("vsync", True)
     mygame.settings.set_default("show_fps", False)
+    mygame.settings.set_default("camera_speed", 0.8)
+    mygame.settings.set_default(
+        "window_modes",
+        {
+            "double_buffer": True,
+            "hardware_acceleration": True,
+        },
+    )
     mygame.icon_path = join(".", "icon.png")
     mygame.settings.from_toml(SETTINGS_PATH)
     mygame.init()

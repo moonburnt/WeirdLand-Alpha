@@ -1,7 +1,7 @@
 from WGF import Scene, game, RGB, base, shared, Size, Point
 from WGF.tasks import TaskManager
 from Game import entities
-from pygame import sprite, transform, Surface
+from pygame import sprite, transform, Surface, key
 from random import randint, choice
 from enum import Enum
 from math import ceil
@@ -9,10 +9,10 @@ import logging
 
 log = logging.getLogger(__name__)
 
-
-class MoveCamera(Enum):
-    left: int = 10
-    right: int = -10
+# It cant be the same as entity Direction, coz its values are inverted
+class CameraDirection(Enum):
+    left: int = 1
+    right: int = -1
     stop: int = 0
 
 
@@ -58,7 +58,7 @@ def init():
     sc.enemy_storage = []
     sc.enemy_counter = 0
 
-    sc.camera_direction = MoveCamera.stop
+    sc.camera_direction = CameraDirection.stop
 
     # Sharing vars that will be accessed from entity module
     shared.camera_offset = Point(0, 0)
@@ -66,7 +66,6 @@ def init():
     shared.bg_size = sc.bg_size
 
     spawn()
-    move_cam()
 
 
 def remove_dead():
@@ -116,6 +115,8 @@ def set_environment():
 @sc.showmethod
 def show():
     set_environment()
+    # Setting camera to appear at center of screen on start
+    shared.camera_offset.x = -game.screen.get_rect().width / 2
 
 
 def update_score():
@@ -125,12 +126,12 @@ def update_score():
     game.screen.blit(text, textpos)
 
 
-@sc.mgr.task("move_camera")
-def move_cam():
-    if sc.camera_direction:
-        new_x = shared.camera_offset.x + sc.camera_direction.value
-        if -sc.screen_diff <= new_x <= 0:
-            shared.camera_offset.x = new_x
+def move_cam(direction: CameraDirection):
+    dt = game.clock.get_time()
+    spd = game.settings["camera_speed"]
+    new_x = shared.camera_offset.x + direction.value * spd * dt
+    if -sc.screen_diff <= new_x <= 0:
+        shared.camera_offset.x = new_x
 
 
 @sc.updatemethod
@@ -141,15 +142,19 @@ def updater():
         elif event.type == base.pgl.MOUSEBUTTONUP:
             sc.weapon.pullback()
 
-        if event.type == base.pgl.KEYDOWN:
-            if event.key == base.pgl.K_d:
-                sc.camera_direction = MoveCamera.right
-            elif event.key == base.pgl.K_a:
-                sc.camera_direction = MoveCamera.left
+    # Camera controls shenanigans
+    right = False
+    left = False
 
-        if event.type == base.pgl.KEYUP:
-            if event.key == base.pgl.K_d or event.key == base.pgl.K_a:
-                sc.camera_direction = MoveCamera.stop
+    if key.get_pressed()[base.pgl.K_d]:
+        right = True
+    if key.get_pressed()[base.pgl.K_a]:
+        left = True
+
+    if right and not left:
+        move_cam(CameraDirection.right)
+    elif left and not right:
+        move_cam(CameraDirection.left)
 
     sc.mgr.update()
     update_enemies()
