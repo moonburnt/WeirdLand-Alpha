@@ -23,10 +23,12 @@ args = ap.parse_args()
 if args.debug:
     log.setLevel(logging.DEBUG)
 
-log.info("Running the game")
-# try:
 game = make_game()
-game.run()
+log.info("Running the game")
+try:
+    game.run()
+except KeyboardInterrupt:
+    game.exit()
 # except Exception as e:
 #    log.critical(e)
 #    exit(2)

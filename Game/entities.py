@@ -1,5 +1,6 @@
-from pygame import mouse, sprite, Surface, display, transform, Rect
+from pygame import Surface, transform, Rect
 from WGF import game, loader, shared, Point
+from WGF.nodes import VisualNode, Cursor
 from WGF.tasks import Animation
 from enum import Enum
 import logging
@@ -32,36 +33,28 @@ def rescale(img: Surface, scale: int) -> Surface:
     return transform.scale(img, (x, y))
 
 
-class Entity(sprite.Sprite):
-    def __init__(self, pos: Point, distance: float = 1.0):
-        super().__init__()
-        self.rect = self.image.get_rect()
-        # Distance means distance from camera. Its float that should (under normal
-        # circuimstances) be between 0.0 and 1.0.
-        # 0.0 means entity's position is unaffected by camera, 1.0 - that it
-        # moves together with camera. Its not recommended to set non-default
-        # distance to moving targets tho
-        self.distance = distance
-
-        self.set_pos(pos)
-
-    def update(self):
-        self.set_pos(self.pos)
-
-    def set_pos(self, pos: Point):
-        self.pos = pos
-        self.rect.x = int(shared.camera_offset.x * self.distance + self.pos.x)
-        self.rect.y = int(shared.camera_offset.y * self.distance + self.pos.y)
-
-
-class Creature(Entity):
-    def __init__(self, pos: Point, hp: int, distance: float = 1.0, score: int = 10):
-        super().__init__(pos=pos, distance=distance)
+class Creature(VisualNode):
+    def __init__(
+        self,
+        name: str,
+        surface,
+        hitbox: Rect,
+        pos: Point,
+        hp: int,
+        distance: float = 1.0,
+        score: int = 10,
+    ):
+        super().__init__(name=name, surface=surface, pos=pos, distance=distance)
 
         self.hp = hp
         self.alive = True
         # This reffers to reward granted to player for killing creature
         self.score = score
+        self.hitbox = hitbox
+
+    def _updatemethod(self):
+        self.hitbox.centerx = self.rect.centerx
+        self.hitbox.centery = self.rect.centery
 
     def get_damage(self, amount: int):
         self.hp -= amount
@@ -71,35 +64,37 @@ class Creature(Entity):
 
     def die(self):
         self.alive = False
+        shared.kill_counter += 1
+        self.hide()
 
 
-class Grass(Entity):
+class Grass(VisualNode):
     scale: int = 4
 
     def __init__(self, pos: Point, bg: bool = False):
         if bg:
-            self.image = game.assets.images["grass_bg"]
+            image = game.assets.images["grass_bg"]
             distance = 0.9
         else:
-            self.image = game.assets.images["grass"]
+            image = game.assets.images["grass"]
             distance = 1
 
         if self.scale:
-            self.image = rescale(self.image, self.scale)
+            image = rescale(image, self.scale)
 
-        super().__init__(pos=pos, distance=distance)
+        super().__init__(name="grass", surface=image, pos=pos, distance=distance)
 
 
-class Mountains(Entity):
+class Mountains(VisualNode):
     scale: int = 4
 
     def __init__(self, pos: Point):
-        self.image = game.assets.images["mountains"]
+        image = game.assets.images["mountains"]
 
         if self.scale:
-            self.image = rescale(self.image, self.scale)
+            image = rescale(image, self.scale)
 
-        super().__init__(pos=pos, distance=0.3)
+        super().__init__(name="mountains", surface=image, pos=pos, distance=0.3)
 
 
 @enemy
@@ -107,12 +102,19 @@ class Dummy(Creature):
     scale: int = 4
 
     def __init__(self, pos: Point, hp: int = 1):
-        self.image = game.assets.images["dummy"]
+        image = game.assets.images["dummy"]
 
         if self.scale:
-            self.image = rescale(self.image, self.scale)
+            image = rescale(image, self.scale)
 
-        super().__init__(pos=pos, hp=hp, score=5)
+        super().__init__(
+            name="dummy",
+            surface=image,
+            hitbox=Rect(80, 80, 80, 80),
+            pos=pos,
+            hp=hp,
+            score=5,
+        )
 
 
 @enemy
@@ -123,14 +125,24 @@ class Walker(Creature):
     def __init__(self, pos: Point, hp: int = 1):
         sheet = loader.Spritesheet(game.assets.images["enemy"])
         self.animation = Animation(sheet.get_sprites((32, 32)), scale=self.scale)
-        self.image = self.animation[0]
-        super().__init__(pos=pos, hp=hp, score=10)
+        image = self.animation[0]
+        super().__init__(
+            name="walker",
+            surface=image,
+            hitbox=Rect(80, 80, 80, 80),
+            pos=pos,
+            hp=hp,
+            score=10,
+        )
 
         self.direction = Direction.right
 
-    def update(self):
-        """Make entity do different things, depending on current status effects"""
-        super().update()
+    # def update(self):
+    #     """Make entity do different things, depending on current status effects"""
+    #     super().update()
+    #     if self.alive:
+    #         self.walk()
+    def _updatemethod(self):
         if self.alive:
             self.walk()
 
@@ -139,7 +151,7 @@ class Walker(Creature):
 
         new_x = self.pos.x + self.horizontal_speed * self.direction.value
 
-        if new_x > shared.bg_size.width - 150:
+        if new_x > shared.bg_size.width:
             self.direction = Direction.left
             new_x = self.pos.x + self.horizontal_speed * self.direction.value
             self.animation.flip(horizontally=True)
@@ -148,15 +160,18 @@ class Walker(Creature):
             new_x = self.pos.x + self.horizontal_speed * self.direction.value
             self.animation.flip(horizontally=True)
 
-        self.set_pos(Point(new_x, self.pos.y))
+        self.pos = Point(new_x, self.pos.y)
 
-        nxt = self.animation.next()
+        nxt = self.animation.update()
         if nxt:
-            self.image = nxt
+            self.surface = nxt
+
+        self.hitbox.centerx = self.rect.centerx
+        self.hitbox.centery = self.rect.centery
 
 
 # #TODO: rework this into "weapon", make it serve as base for others
-class Gun(sprite.Sprite):
+class Gun(Cursor):
     scale: int = 2
     attacking: bool = False
 
@@ -178,20 +193,25 @@ class Gun(sprite.Sprite):
             self.sprites["attack"] = transform.scale(self.sprites["attack"], (x, y))
             self.sprites["idle"] = transform.scale(self.sprites["idle"], (x, y))
 
-        self.image = self.sprites["idle"]
+        image = self.sprites["idle"]
 
         # I think, this should make hitbox smaller?
-        point = 1 * self.scale
-        self.rect = Rect(point, point, point, point)
-        super().__init__()
+        # point = 1 * self.scale
+        # self.rect = Rect(point, point, point, point)
+        super().__init__(name="gun", surface=image)
 
         self.hit_sound = game.assets.sounds["hit"]
         self.miss_sound = game.assets.sounds["miss"]
 
         self.damage = damage
 
-    def update(self):
-        self.rect.midtop = mouse.get_pos()
+        self.hitbox = Rect(1, 1, 1, 1)
+        # self.hitbox.centerx = self.rect.centerx
+        # self.hitbox.centery = self.rect.centery
+
+    def _updatemethod(self):
+        self.hitbox.centerx = self.rect.centerx
+        self.hitbox.centery = self.rect.centery
 
     def attack(self, targets: list) -> bool:
         """Attack target with weapon and check if collision has happend"""
@@ -203,7 +223,8 @@ class Gun(sprite.Sprite):
         # Its reversed coz newer entities appear under older, so their hitbox
         # will count for hit first
         for target in reversed(targets):
-            if self.rect.colliderect(target.rect):
+            # if self.rect.colliderect(target.rect):
+            if self.hitbox.colliderect(target.hitbox):
                 self.hit_sound.play()
                 target.get_damage(self.damage)
                 hit = True
@@ -213,8 +234,8 @@ class Gun(sprite.Sprite):
         if not hit:
             self.miss_sound.play()
 
-        self.image = self.sprites["attack"]
+        self.surface = self.sprites["attack"]
 
     def pullback(self):
         self.attacking = False
-        self.image = self.sprites["idle"]
+        self.surface = self.sprites["idle"]

@@ -1,4 +1,4 @@
-from WGF import GameWindow, base, RGB, Size, AssetsLoader
+from WGF import GameWindow, AssetsLoader
 from os.path import join
 import logging
 
@@ -42,58 +42,12 @@ def make_game() -> GameWindow:
     # Specifying font as shared variable, since it should be used in all scenes
     shared.font = mygame.assets.load_font("./Assets/Fonts/romulus.ttf", 36)
 
-    from pygame import draw, Surface
-
-    mg = mygame.tree
-
-    def show_pause_msg():
-        text = shared.font.render("PAUSED", False, (10, 10, 10))
-        textpos = text.get_rect()
-        gr = mygame.screen.get_rect()
-        textpos.centerx = gr.centerx
-        textpos.centery = gr.centery
-        frame = Surface(Size(108, 32)).convert()
-        frame.fill(RGB.from_hex("3f3f74"))
-        mygame.screen.blit(frame, textpos)
-        mygame.screen.blit(text, textpos)
-
-    @mg.initmethod
-    def init():
-        mg.game_paused = False
-
-    # Modifying tree's updatemethod to implement pause support
-    @mg.updatemethod
-    def update():
-        for event in mygame.event_handler.events:
-            if event.type == base.pgl.KEYDOWN:
-                if event.key == base.pgl.K_p:
-                    if mg._current_child:
-                        if mg._current_child.playing:
-                            mg._current_child.pause()
-                            mg.game_paused = True
-                        else:
-                            mg._current_child.play()
-                            mg.game_paused = False
-
-    # Postupdate methods run within update cycle, but after child's tasks
-    # This makes it possible to draw things that should appear on top of everything
-    # via these - say, fps counters
-    @mg.postupdatemethod
-    def postupdate():
-        if mygame.settings["show_fps"] and not mg.game_paused:
-            fps = mygame.clock.get_fps()
-            text = shared.font.render(f"FPS: {fps:2.0f}", False, (10, 10, 10))
-            textpos = text.get_rect()
-
-            textpos.topright = mygame.screen.get_rect().topright
-            mygame.screen.blit(text, textpos)
-
-        if mg.game_paused:
-            show_pause_msg()
-
     from Game.scenes import logo, level
+    from Game.scenes.meta import pause_wrapper, fps_counter
 
-    mg.add(logo.sc, default=True)
-    mg.add(level.sc)
+    pause_wrapper.add_child(level.sc)
+    mygame.tree.add_child(logo.sc)
+    mygame.tree.add_child(pause_wrapper, show=False)
+    mygame.tree.add_child(fps_counter, show=mygame.settings["show_fps"])
 
     return mygame

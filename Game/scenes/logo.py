@@ -1,4 +1,5 @@
-from WGF import Scene, game, RGB, base, shared, tree, clock
+from WGF import game, RGB, Point, base, shared, tree, clock
+from WGF.nodes import Scene, TextNode
 from Game import entities
 from pygame import sprite, transform, Surface
 import logging
@@ -6,47 +7,53 @@ import logging
 log = logging.getLogger(__name__)
 
 # Scene blueprint
-sc = Scene("intro")
+bg = Surface(game.screen.get_size()).convert()
+bg.fill(RGB(255, 255, 255))
+
+sc = Scene(name="intro", background=bg)
 
 
 @sc.initmethod
 def init():
-    sc.background = Surface(game.screen.get_size()).convert()
-    sc.background.fill(RGB(255, 255, 255))
+    gr = game.screen.get_rect()
+    sc.text = TextNode(
+        name="logo",
+        text="Hello, World!",
+        font=shared.font,
+        antialiasing=False,
+        pos=Point(gr.centerx, gr.centery),
+    )
+    sc.add_child(sc.text, show=False)
 
 
 @sc.showmethod
 def show():
-    # Setting up text, text's antialias and its position on screen
-    text = shared.font.render("Hello, World", False, (10, 10, 10))
-    # Getting text's rectangle - local version of node - to drag/resize item
-    textpos = text.get_rect()
-    # This will set position to be the same as screen's center
-    textpos.centerx = sc.background.get_rect().centerx
-    textpos.centery = sc.background.get_rect().centery
-    sc.background.blit(text, textpos)
+    sc.text.show()
 
     # Hiding game's mouse
     game.mouse.set_visible(False)
 
-    # Wipe out whats already visible with background
-    game.screen.blit(sc.background, (0, 0))
-
     # Scheduling logo scene to auto skip to next one in 3 seconds
     sc.time = 3000
+
+
+def switch():
+    # #TODO: idk how to re-implement switch functionality properly
+    print("Switching to level")
+    sc.hide()
+    tree["pause_screen"].show()
+    # shared.level.show()
 
 
 @sc.updatemethod
 def updater():
     for event in game.event_handler.events:
         if event.type == base.pgl.MOUSEBUTTONDOWN:
-            game.tree.switch("level")
+            switch()
             return
-
-    game.screen.blit(sc.background, (0, 0))
 
     sc.time -= clock.get_time()
     if sc.time > 0:
         return
 
-    game.tree.switch("level")
+    switch()
