@@ -46,7 +46,7 @@ pip install -r dev-requirements.txt
 dep_check pyinstaller
 
 pyinstaller Game/run.py --onefile --noconsole --clean --workpath $cache_dir --distpath $build_dir --name $game_name
-cp -r ./Assets $build_dir/Assets
+cp -r ./Assets $build_dir
 cp ./icon.png $build_dir
 
 echo "Successfully finished building $game_name!"
