@@ -39,10 +39,9 @@ def show():
 
 def switch():
     # #TODO: idk how to re-implement switch functionality properly
-    log.debug("Switching to level")
+    log.debug("Switching to menu")
     sc.hide()
-    tree["pause_screen"].show()
-    # shared.level.show()
+    tree["main_menu"].show()
 
 
 @sc.updatemethod

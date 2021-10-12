@@ -137,11 +137,6 @@ class Walker(Creature):
 
         self.direction = Direction.right
 
-    # def update(self):
-    #     """Make entity do different things, depending on current status effects"""
-    #     super().update()
-    #     if self.alive:
-    #         self.walk()
     def _updatemethod(self):
         if self.alive:
             self.walk()
@@ -170,12 +165,12 @@ class Walker(Creature):
         self.hitbox.centery = self.rect.centery
 
 
-# #TODO: rework this into "weapon", make it serve as base for others
-class Gun(Cursor):
+# Its has weird naming, coz I wanted actual weapon to inherit from it
+class MousePointer(Cursor):
     scale: int = 2
     attacking: bool = False
 
-    def __init__(self, damage: int = 1):
+    def __init__(self):
         sprites = loader.Spritesheet(game.assets.images["crosshairs"]).get_sprites(
             (16, 16)
         )
@@ -195,25 +190,48 @@ class Gun(Cursor):
 
         image = self.sprites["idle"]
 
-        # I think, this should make hitbox smaller?
-        # point = 1 * self.scale
-        # self.rect = Rect(point, point, point, point)
         super().__init__(name="gun", surface=image)
 
         self.hit_sound = game.assets.sounds["hit"]
         self.miss_sound = game.assets.sounds["miss"]
 
-        self.damage = damage
+    def attack(self, targets: list):
+        """Attack target with weapon and check if collision has happend"""
+        if self.attacking:
+            return False
 
+        self.attacking = True
+        hit = False
+        for target in targets:
+            if self.rect.colliderect(target.rect):
+                self.hit_sound.play()
+                target.on_click()
+                hit = True
+                break
+        if not hit:
+            self.miss_sound.play()
+
+        self.surface = self.sprites["attack"]
+
+    def pullback(self):
+        self.attacking = False
+        self.surface = self.sprites["idle"]
+
+
+class Gun(MousePointer):
+    scale: int = 2
+    attacking: bool = False
+
+    def __init__(self, damage: int = 1):
+        super().__init__()
+        self.damage = damage
         self.hitbox = Rect(1, 1, 1, 1)
-        # self.hitbox.centerx = self.rect.centerx
-        # self.hitbox.centery = self.rect.centery
 
     def _updatemethod(self):
         self.hitbox.centerx = self.rect.centerx
         self.hitbox.centery = self.rect.centery
 
-    def attack(self, targets: list) -> bool:
+    def attack(self, targets: list):
         """Attack target with weapon and check if collision has happend"""
         if self.attacking:
             return False
@@ -223,7 +241,6 @@ class Gun(Cursor):
         # Its reversed coz newer entities appear under older, so their hitbox
         # will count for hit first
         for target in reversed(targets):
-            # if self.rect.colliderect(target.rect):
             if self.hitbox.colliderect(target.hitbox):
                 self.hit_sound.play()
                 target.get_damage(self.damage)
@@ -235,7 +252,3 @@ class Gun(Cursor):
             self.miss_sound.play()
 
         self.surface = self.sprites["attack"]
-
-    def pullback(self):
-        self.attacking = False
-        self.surface = self.sprites["idle"]

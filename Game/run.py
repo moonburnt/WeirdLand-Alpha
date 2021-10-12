@@ -29,6 +29,7 @@ try:
     game.run()
 except KeyboardInterrupt:
     game.exit()
+    # continue
 # except Exception as e:
 #    log.critical(e)
 #    exit(2)
