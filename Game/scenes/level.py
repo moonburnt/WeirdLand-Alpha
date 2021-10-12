@@ -24,7 +24,6 @@ bg.fill(RGB.from_hex("cbdbfc"))
 
 screen_bottom = game.screen.get_rect().bottom
 
-# sc = Node(name = "level")
 sc = Scene(name="level", background=bg)
 # Initializing per-scene task manager, to avoid issues with spawning things
 # while game is paused
@@ -74,17 +73,6 @@ def init():
     sc.add_child(front_grass)
     sc.add_child(Gun())
 
-    # score = TextNode(
-    #     name = "score_ui",
-    #     text = "Score: 0",
-    #     font = shared.font,
-    #     antialiasing=False,
-    #     pos = (Point(60, 10)),
-    # )
-
-    # sc.add_child(score)
-
-    # set_environment()
     # Sharing vars that will be accessed from entity module
     shared.score = 0
     shared.kill_counter = 0

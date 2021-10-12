@@ -1,6 +1,6 @@
 from pygame import draw, Surface
 from WGF import game, Size, RGB, Point, shared, base
-from WGF.nodes import Node, TextNode
+from WGF.nodes import Node, TextNode, Align
 import logging
 
 log = logging.getLogger(__name__)
@@ -53,7 +53,8 @@ fps_counter = TextNode(
     text="",
     font=shared.font,
     antialiasing=False,
-    pos=Point(gr.width - 50, 10),
+    pos=Point(gr.width, 0),
+    align=Align.topright,
 )
 
 
