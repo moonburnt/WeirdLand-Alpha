@@ -50,6 +50,8 @@ class Creature(VisualNode):
         self.alive = True
         # This reffers to reward granted to player for killing creature
         self.score = score
+        # I could make hitboxes more preciese with masks, but I wont do that for
+        # now, since animations would need to update these each frame
         self.hitbox = hitbox
 
     def _updatemethod(self):
@@ -195,6 +197,12 @@ class MousePointer(Cursor):
         self.hit_sound = game.assets.sounds["hit"]
         self.miss_sound = game.assets.sounds["miss"]
 
+        self.hitbox = Rect(1, 1, 1, 1)
+
+    def _updatemethod(self):
+        self.hitbox.centerx = self.rect.centerx
+        self.hitbox.centery = self.rect.centery
+
     def attack(self, targets: list):
         """Attack target with weapon and check if collision has happend"""
         if self.attacking:
@@ -203,7 +211,7 @@ class MousePointer(Cursor):
         self.attacking = True
         hit = False
         for target in targets:
-            if self.rect.colliderect(target.rect):
+            if self.hitbox.colliderect(target.rect):
                 self.hit_sound.play()
                 target.on_click()
                 hit = True
@@ -219,17 +227,9 @@ class MousePointer(Cursor):
 
 
 class Gun(MousePointer):
-    scale: int = 2
-    attacking: bool = False
-
     def __init__(self, damage: int = 1):
         super().__init__()
         self.damage = damage
-        self.hitbox = Rect(1, 1, 1, 1)
-
-    def _updatemethod(self):
-        self.hitbox.centerx = self.rect.centerx
-        self.hitbox.centery = self.rect.centery
 
     def attack(self, targets: list):
         """Attack target with weapon and check if collision has happend"""

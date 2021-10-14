@@ -41,7 +41,7 @@ def switch():
     # #TODO: idk how to re-implement switch functionality properly
     log.debug("Switching to menu")
     sc.hide()
-    tree["main_menu"].show()
+    tree["menu_wrapper"].show()
 
 
 @sc.updatemethod

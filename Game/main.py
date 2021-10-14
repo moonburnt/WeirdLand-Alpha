@@ -42,13 +42,12 @@ def make_game() -> GameWindow:
     # Specifying font as shared variable, since it should be used in all scenes
     shared.font = mygame.assets.load_font("./Assets/Fonts/romulus.ttf", 36)
 
-    from Game.scenes import logo, level, main_menu
-    from Game.scenes.meta import pause_wrapper, fps_counter
+    from Game.scenes import logo, level, menus, meta
 
-    pause_wrapper.add_child(level.sc)
+    meta.pause_wrapper.add_child(level.sc)
     mygame.tree.add_child(logo.sc)
-    mygame.tree.add_child(main_menu.sc, show=False)
-    mygame.tree.add_child(pause_wrapper, show=False)
-    mygame.tree.add_child(fps_counter, show=mygame.settings["show_fps"])
+    mygame.tree.add_child(menus.mm_wrapper, show=False)
+    mygame.tree.add_child(meta.pause_wrapper, show=False)
+    mygame.tree.add_child(meta.fps_counter, show=mygame.settings["show_fps"])
 
     return mygame
