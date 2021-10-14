@@ -1,7 +1,8 @@
-from WGF.nodes import Scene, Button, Node, TextNode
-from WGF import shared, Point, game, tree, RGB, base, task_mgr
+from WGF.nodes import Scene, Button, Node, VisualNode
+from WGF import Point, game, tree, RGB, base, task_mgr
 from pygame import Surface
-from Game.entities import MousePointer
+from Game.entities import MousePointer, rescale
+from Game.ui import make_button, make_text
 import logging
 
 log = logging.getLogger(__name__)
@@ -9,18 +10,6 @@ log = logging.getLogger(__name__)
 bg = Surface(game.screen.get_size()).convert()
 bg.fill(RGB.from_hex("cbdbfc"))
 gr = game.screen.get_rect()
-
-
-def make_button(name: str, text: str, pos: Point, active: bool = True) -> Button:
-    return Button(
-        name=name,
-        text=text,
-        font=shared.font,
-        antialiasing=False,
-        color=RGB(0, 0, 0) if active else RGB.from_hex("222034"),
-        pos=pos,
-    )
-
 
 mm_wrapper = Scene(name="menu_wrapper", background=bg)
 
@@ -64,12 +53,10 @@ mode_selection = Node(name="mode_selection")
 
 @mode_selection.initmethod
 def init_mm():
-    ms_title = TextNode(
+    ms_title = make_text(
         name="ms_title",
         text="Select Gamemode",
-        font=shared.font,
-        antialiasing=False,
-        pos=Point(gr.centerx, gr.centery - 100),
+        pos=Point(gr.centerx, gr.centery - 70),
     )
 
     # #Not implemented yet #TODO
@@ -107,7 +94,7 @@ def init_mm():
     back_button = make_button(
         name="back_button",
         text="Back to Menu",
-        pos=Point(gr.centerx, gr.centery + 160),
+        pos=Point(gr.centerx, gr.centery + 130),
     )
 
     @back_button.clickmethod
@@ -129,6 +116,21 @@ def init_mm():
         )
 
 
+author_txt = make_text(
+    name="author_txt",
+    text="© moonburnt, 2021",
+    pos=Point(gr.centerx, gr.bottom - 50),
+)
+
+logo = game.assets.images["game_logo"]
+logo = rescale(logo, 4)
+game_logo = VisualNode(
+    name="game_logo",
+    surface=logo,
+    pos=Point(gr.centerx, gr.top + 150),
+)
+
+
 @mm_wrapper.showmethod
 def show():
     # Doing things like that, coz otherwise we could accidently exit game right
@@ -143,6 +145,8 @@ def show():
                 mm_wrapper["gun"].pullback()
 
 
+mm_wrapper.add_child(game_logo)
 mm_wrapper.add_child(main_menu)
 mm_wrapper.add_child(mode_selection, show=False)
+mm_wrapper.add_child(author_txt)
 mm_wrapper.add_child(MousePointer())

@@ -1,6 +1,7 @@
 from pygame import draw, Surface
 from WGF import game, Size, RGB, Point, shared, base
 from WGF.nodes import Node, TextNode, Align
+from Game.ui import make_text
 import logging
 
 log = logging.getLogger(__name__)
@@ -38,11 +39,9 @@ def update():
 gr = game.screen.get_rect()
 frame = Surface(Size(108, 32)).convert()
 frame.fill(RGB.from_hex("3f3f74"))
-pause_msg = TextNode(
+pause_msg = make_text(
     name="pause_msg",
     text="PAUSED",
-    font=shared.font,
-    antialiasing=False,
     pos=Point(gr.centerx, gr.centery),
     frame=frame,
 )

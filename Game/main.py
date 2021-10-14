@@ -9,7 +9,7 @@ SETTINGS_PATH = join(".", "settings.toml")
 
 def make_game() -> GameWindow:
     """Factory to create custom GameWindow"""
-    mygame = GameWindow("Whatever Shooting Game")
+    mygame = GameWindow("WeirdLand")
     assets_directory = join(".", "Assets")
     mygame.assets = AssetsLoader(
         assets_directory=assets_directory,

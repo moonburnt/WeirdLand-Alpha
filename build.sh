@@ -24,7 +24,7 @@ dep_check() {
     fi
 }
 
-game_name="WSG"
+game_name="WeirdLand"
 build_dir="./build/$game_name/linux"
 cache_dir="./.temp"
 assets_dir="./Assets"

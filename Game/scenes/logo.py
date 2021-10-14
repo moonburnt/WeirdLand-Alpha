@@ -1,6 +1,6 @@
 from WGF import game, RGB, Point, base, shared, tree, clock
-from WGF.nodes import Scene, TextNode
-from Game import entities
+from WGF.nodes import Scene, TextNode, VisualNode
+from Game.entities import rescale
 from pygame import sprite, transform, Surface
 import logging
 
@@ -16,20 +16,29 @@ sc = Scene(name="intro", background=bg)
 @sc.initmethod
 def init():
     gr = game.screen.get_rect()
-    sc.text = TextNode(
+
+    img = game.assets.images["trashhead"]
+    img = rescale(img, 4)
+
+    icon = VisualNode(
+        name="icon",
+        surface=img,
+        pos=Point(gr.centerx - 400, gr.centery),
+    )
+
+    logo = TextNode(
         name="logo",
-        text="Hello, World!",
+        text="This game has been made with pygame+WGF",
         font=shared.font,
         antialiasing=False,
         pos=Point(gr.centerx, gr.centery),
     )
-    sc.add_child(sc.text, show=False)
+    sc["icon"] = icon
+    sc["logo"] = logo
 
 
 @sc.showmethod
 def show():
-    sc.text.show()
-
     # Hiding game's mouse
     game.mouse.set_visible(False)
 
