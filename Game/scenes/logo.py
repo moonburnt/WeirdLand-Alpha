@@ -1,6 +1,5 @@
 from WGF import game, RGB, Point, base, shared, tree, clock
 from WGF.nodes import Scene, TextNode, VisualNode
-from Game.entities import rescale
 from pygame import sprite, transform, Surface
 import logging
 
@@ -17,12 +16,9 @@ sc = Scene(name="intro", background=bg)
 def init():
     gr = game.screen.get_rect()
 
-    img = game.assets.images["trashhead"]
-    img = rescale(img, 4)
-
     icon = VisualNode(
         name="icon",
-        surface=img,
+        surface=game.assets.images["trashhead"],
         pos=Point(gr.centerx - 400, gr.centery),
     )
 

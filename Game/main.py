@@ -11,10 +11,11 @@ def make_game() -> GameWindow:
     """Factory to create custom GameWindow"""
     mygame = GameWindow("WeirdLand")
     assets_directory = join(".", "Assets")
+    img_directory = join(assets_directory, join("Sprites"))
+
     mygame.assets = AssetsLoader(
         assets_directory=assets_directory,
         fonts_directory=join(assets_directory, "Fonts"),
-        images_directory=join(assets_directory, "Sprites"),
         sounds_directory=join(assets_directory, "Sounds"),
         font_extensions=[".ttf"],
         image_extensions=[".png"],
@@ -37,7 +38,22 @@ def make_game() -> GameWindow:
 
     mygame.assets.load_all()
 
+    mygame.assets.spritesheets = {}
+
     from WGF import shared
+
+    # This is kinda janky, but also kinda not?
+    shared.sprite_scale = 4
+    mygame.assets.load_images(
+        path=join(img_directory, "4x"),
+        scale=shared.sprite_scale,
+    )
+
+    shared.extra_scale = 2
+    mygame.assets.load_images(
+        path=join(img_directory, "2x"),
+        scale=shared.extra_scale,
+    )
 
     # Specifying font as shared variable, since it should be used in all scenes
     shared.font = mygame.assets.load_font("./Assets/Fonts/romulus.ttf", 36)

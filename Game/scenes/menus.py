@@ -1,7 +1,7 @@
 from WGF.nodes import Scene, Button, Node, VisualNode
 from WGF import Point, game, tree, RGB, base, task_mgr
 from pygame import Surface
-from Game.entities import MousePointer, rescale
+from Game.entities import MousePointer
 from Game.ui import make_button, make_text
 import logging
 
@@ -122,11 +122,9 @@ author_txt = make_text(
     pos=Point(gr.centerx, gr.bottom - 50),
 )
 
-logo = game.assets.images["game_logo"]
-logo = rescale(logo, 4)
 game_logo = VisualNode(
     name="game_logo",
-    surface=logo,
+    surface=game.assets.images["game_logo"],
     pos=Point(gr.centerx, gr.top + 150),
 )
 

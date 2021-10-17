@@ -26,13 +26,6 @@ def enemy(cls):
     return inner
 
 
-def rescale(img: Surface, scale: int) -> Surface:
-    size = img.get_size()
-    x = size[0] * scale
-    y = size[1] * scale
-    return transform.scale(img, (x, y))
-
-
 class Creature(VisualNode):
     def __init__(
         self,
@@ -71,8 +64,6 @@ class Creature(VisualNode):
 
 
 class Grass(VisualNode):
-    scale: int = 4
-
     def __init__(self, pos: Point, bg: bool = False):
         if bg:
             image = game.assets.images["grass_bg"]
@@ -81,37 +72,30 @@ class Grass(VisualNode):
             image = game.assets.images["grass"]
             distance = 1
 
-        if self.scale:
-            image = rescale(image, self.scale)
-
-        super().__init__(name="grass", surface=image, pos=pos, distance=distance)
+        super().__init__(
+            name="grass",
+            surface=image,
+            pos=pos,
+            distance=distance,
+        )
 
 
 class Mountains(VisualNode):
-    scale: int = 4
-
     def __init__(self, pos: Point):
-        image = game.assets.images["mountains"]
-
-        if self.scale:
-            image = rescale(image, self.scale)
-
-        super().__init__(name="mountains", surface=image, pos=pos, distance=0.3)
+        super().__init__(
+            name="mountains",
+            surface=game.assets.images["mountains"],
+            pos=pos,
+            distance=0.3,
+        )
 
 
 @enemy
 class Dummy(Creature):
-    scale: int = 4
-
     def __init__(self, pos: Point, hp: int = 1):
-        image = game.assets.images["dummy"]
-
-        if self.scale:
-            image = rescale(image, self.scale)
-
         super().__init__(
             name="dummy",
-            surface=image,
+            surface=game.assets.images["dummy"],
             hitbox=Rect(80, 80, 80, 80),
             pos=pos,
             hp=hp,
@@ -119,18 +103,19 @@ class Dummy(Creature):
         )
 
 
-@enemy
-class Walker(Creature):
-    scale: int = 4
-    horizontal_speed: int = 4
+class MovingEnemy(Creature):
+    horizontal_speed: int = 1
 
-    def __init__(self, pos: Point, hp: int = 1):
-        sheet = loader.Spritesheet(game.assets.images["enemy"])
-        self.animation = Animation(sheet.get_sprites((32, 32)), scale=self.scale)
-        image = self.animation[0]
+    def __init__(self, name: str, pos: Point, hp: int = 1):
+        if not name in game.assets.spritesheets:
+            sheet = loader.Spritesheet(game.assets.images[name])
+            side = 32 * shared.sprite_scale
+            game.assets.spritesheets[name] = sheet.get_sprites((side, side))
+        self.animation = Animation(game.assets.spritesheets[name])
+
         super().__init__(
-            name="walker",
-            surface=image,
+            name=name,
+            surface=self.animation[0],
             hitbox=Rect(80, 80, 80, 80),
             pos=pos,
             hp=hp,
@@ -167,28 +152,48 @@ class Walker(Creature):
         self.hitbox.centery = self.rect.centery
 
 
+@enemy
+class Walker(MovingEnemy):
+    horizontal_speed: int = 4
+
+    def __init__(self, pos: Point):
+        super().__init__(
+            name="walker",
+            pos=pos,
+        )
+
+
+@enemy
+class Bat(MovingEnemy):
+    horizontal_speed: int = 6
+
+    def __init__(self, pos: Point):
+        # Not the best way to handle different spawn heights, but will do for now
+        # #TODO
+        pos.y -= 400
+
+        super().__init__(
+            name="bat",
+            pos=pos,
+        )
+
+
 # Its has weird naming, coz I wanted actual weapon to inherit from it
 class MousePointer(Cursor):
-    scale: int = 2
     attacking: bool = False
 
     def __init__(self):
-        sprites = loader.Spritesheet(game.assets.images["crosshairs"]).get_sprites(
-            (16, 16)
-        )
+        if not "crosshairs" in game.assets.spritesheets:
+            side = 16 * shared.extra_scale
+            game.assets.spritesheets["crosshairs"] = loader.Spritesheet(
+                game.assets.images["crosshairs"]
+            ).get_sprites((side, side))
+        sprites = game.assets.spritesheets["crosshairs"]
 
         self.sprites = {
             "attack": sprites[1],
             "idle": sprites[0],
         }
-
-        # #TODO: add support for rescaling to get_sprites(), maybe?
-        if self.scale:
-            size = self.sprites["attack"].get_size()
-            x = size[0] * self.scale
-            y = size[1] * self.scale
-            self.sprites["attack"] = transform.scale(self.sprites["attack"], (x, y))
-            self.sprites["idle"] = transform.scale(self.sprites["idle"], (x, y))
 
         image = self.sprites["idle"]
 
