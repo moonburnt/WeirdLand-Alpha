@@ -1,8 +1,9 @@
 from pygame import Surface, transform, Rect
-from WGF import game, loader, shared, Point
-from WGF.nodes import VisualNode, Cursor
+from WGF import game, loader, shared, Point, task_mgr
+from WGF.nodes import VisualNode, Cursor, Node
 from WGF.tasks import Animation
 from enum import Enum
+from random import choice
 import logging
 
 log = logging.getLogger(__name__)
@@ -26,7 +27,18 @@ def enemy(cls):
     return inner
 
 
-class Creature(VisualNode):
+def get_explosion():
+    if not "explosion" in game.assets.spritesheets:
+        side = 32 * shared.sprite_scale
+        game.assets.spritesheets["explosion"] = loader.Spritesheet(
+            game.assets.images["explosion"]
+        ).get_sprites((side, side))
+
+    return choice(game.assets.spritesheets["explosion"])
+
+
+# class Creature(VisualNode):
+class Creature(Node):
     def __init__(
         self,
         name: str,
@@ -37,7 +49,22 @@ class Creature(VisualNode):
         distance: float = 1.0,
         score: int = 10,
     ):
-        super().__init__(name=name, surface=surface, pos=pos, distance=distance)
+        super().__init__(name=name)
+
+        self.visuals = VisualNode(
+            name=f"{name}_visuals",
+            surface=surface,
+            pos=pos,
+            distance=distance,
+        )
+        self.explosion = VisualNode(
+            name=f"{name}_death",
+            surface=get_explosion(),
+            pos=pos,
+            distance=distance,
+        )
+        self.add_child(self.visuals)
+        self.add_child(self.explosion, show=False)
 
         self.hp = hp
         self.alive = True
@@ -46,10 +73,11 @@ class Creature(VisualNode):
         # I could make hitboxes more preciese with masks, but I wont do that for
         # now, since animations would need to update these each frame
         self.hitbox = hitbox
+        self.remove = False
 
     def _updatemethod(self):
-        self.hitbox.centerx = self.rect.centerx
-        self.hitbox.centery = self.rect.centery
+        self.hitbox.centerx = self.visuals.rect.centerx
+        self.hitbox.centery = self.visuals.rect.centery
 
     def get_damage(self, amount: int):
         self.hp -= amount
@@ -57,10 +85,18 @@ class Creature(VisualNode):
         if self.hp <= 0:
             self.die()
 
+    @task_mgr.do_later(ms=300)
+    def hide_explosion(self):
+        self.explosion.hide()
+        self.remove = True
+
     def die(self):
         self.alive = False
         shared.kill_counter += 1
-        self.hide()
+        self.explosion.pos = self.visuals.pos
+        self.visuals.hide()
+        self.explosion.show()
+        self.hide_explosion()
 
 
 class Grass(VisualNode):
@@ -131,25 +167,25 @@ class MovingEnemy(Creature):
     def walk(self):
         """Make entity walk across the screen and turn at its corners"""
 
-        new_x = self.pos.x + self.horizontal_speed * self.direction.value
+        new_x = self.visuals.pos.x + self.horizontal_speed * self.direction.value
 
         if new_x > shared.bg_size.width:
             self.direction = Direction.left
-            new_x = self.pos.x + self.horizontal_speed * self.direction.value
+            new_x = self.visuals.pos.x + self.horizontal_speed * self.direction.value
             self.animation.flip(horizontally=True)
         elif new_x < 0:
             self.direction = Direction.right
-            new_x = self.pos.x + self.horizontal_speed * self.direction.value
+            new_x = self.visuals.pos.x + self.horizontal_speed * self.direction.value
             self.animation.flip(horizontally=True)
 
-        self.pos = Point(new_x, self.pos.y)
+        self.visuals.pos = Point(new_x, self.visuals.pos.y)
 
         nxt = self.animation.update()
         if nxt:
-            self.surface = nxt
+            self.visuals.surface = nxt
 
-        self.hitbox.centerx = self.rect.centerx
-        self.hitbox.centery = self.rect.centery
+        self.hitbox.centerx = self.visuals.rect.centerx
+        self.hitbox.centery = self.visuals.rect.centery
 
 
 @enemy

@@ -80,6 +80,7 @@ def init():
     sc.add_child(ingame_ui.hud)
 
     sc.enemy_counter = 0
+    sc.enemy_storage = []
 
 
 @sc.mgr.timed_task("spawn_enemies", 1000)
@@ -130,16 +131,19 @@ def move_cam(direction: CameraDirection):
 
 def remove_dead():
     for k, v in tuple(sc["enemies"]):
-        if not v.alive:
+        if v.remove:
             del sc["enemies"][k]
-    sc.enemy_counter = len(sc["enemies"].children)
+    sc.enemy_storage = [i for i in sc["enemies"].children if i.alive]
+    sc.enemy_counter = len(sc.enemy_storage)
 
 
 @sc.updatemethod
 def updater():
+    # #TODO: right now, this triggers for all buttons of mouse, which may cause 
+    # issues if lmb and rmb are clicked simultaneously
     for event in game.event_handler.events:
         if event.type == base.pgl.MOUSEBUTTONDOWN:
-            sc["gun"].attack(sc["enemies"].children)
+            sc["gun"].attack(sc.enemy_storage)
         elif event.type == base.pgl.MOUSEBUTTONUP:
             sc["gun"].pullback()
 
