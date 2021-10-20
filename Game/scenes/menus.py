@@ -30,18 +30,32 @@ def init_mm():
         main_menu.hide()
         tree["menu_wrapper"]["mode_selection"].show()
 
+    options_button = make_button(
+        name="options_button",
+        text="Options",
+        pos=Point(gr.centerx, gr.centery + 30),
+        active=False,
+    )
+
+    score_button = make_button(
+        name="score_button",
+        text="High Scores",
+        pos=Point(gr.centerx, gr.centery + 60),
+        active=False,
+    )
+
     exit_button = make_button(
         name="exit_button",
         text="Exit",
-        pos=Point(gr.centerx, gr.centery + 30),
+        pos=Point(gr.centerx, gr.centery + 90),
     )
 
     @exit_button.clickmethod
     def exit():
         game.active = False
 
-    main_menu.add_child(play_button)
-    main_menu.add_child(exit_button)
+    for button in (play_button, options_button, score_button, exit_button):
+        main_menu.add_child(button)
 
     @main_menu.showmethod
     def show_mm():
@@ -103,11 +117,8 @@ def init_mm():
         mode_selection.hide()
         tree["menu_wrapper"]["main_menu"].show()
 
-    mode_selection.add_child(ms_title)
-    mode_selection.add_child(ta_button)
-    mode_selection.add_child(surv_button)
-    mode_selection.add_child(en_button)
-    mode_selection.add_child(back_button)
+    for item in (ms_title, ta_button, surv_button, en_button, back_button):
+        mode_selection.add_child(item)
 
     @mode_selection.showmethod
     def show_ms():
@@ -137,9 +148,9 @@ def show():
     @task_mgr.do_later(ms=300)
     def update():
         for event in game.event_handler.events:
-            if event.type == base.pgl.MOUSEBUTTONDOWN:
+            if event.type == base.pgl.MOUSEBUTTONDOWN and event.button == 1:
                 mm_wrapper["gun"].attack(mm_wrapper.buttons)
-            elif event.type == base.pgl.MOUSEBUTTONUP:
+            elif event.type == base.pgl.MOUSEBUTTONUP and event.button == 1:
                 mm_wrapper["gun"].pullback()
 
 

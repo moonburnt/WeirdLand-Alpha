@@ -7,6 +7,7 @@ from random import choice, randint
 from enum import Enum
 from math import ceil
 from Game.scenes import ingame_ui
+from Game import ui
 import logging
 
 log = logging.getLogger(__name__)
@@ -66,11 +67,18 @@ def init():
         y=(screen_bottom - 450),
     )
 
+    msg = ui.make_text(
+        name="encourage_msg",
+        text="Shoot Em All!",
+        pos=Point(game.screen.get_size()[0] / 2, game.screen.get_size()[1] / 2),
+    )
+
     sc.add_child(mountains)
     sc.add_child(back_grass)
     sc.add_child(lower_background)
     sc.add_child(Group(name="enemies"))
     sc.add_child(front_grass)
+    sc.add_child(msg)
     sc.add_child(Gun())
 
     # Sharing vars that will be accessed from entity module
@@ -115,10 +123,17 @@ def make_horizontal_filler(
     return items
 
 
+@sc.mgr.do_later(ms=1000)
+def hide_msg():
+    sc["encourage_msg"].hide()
+
+
 @sc.showmethod
 def show():
     camera.pos.x = -game.screen.get_rect().width / 2
     spawn()
+    sc["encourage_msg"].show()
+    hide_msg()
 
 
 def move_cam(direction: CameraDirection):
@@ -139,12 +154,10 @@ def remove_dead():
 
 @sc.updatemethod
 def updater():
-    # #TODO: right now, this triggers for all buttons of mouse, which may cause 
-    # issues if lmb and rmb are clicked simultaneously
     for event in game.event_handler.events:
-        if event.type == base.pgl.MOUSEBUTTONDOWN:
+        if event.type == base.pgl.MOUSEBUTTONDOWN and event.button == 1:
             sc["gun"].attack(sc.enemy_storage)
-        elif event.type == base.pgl.MOUSEBUTTONUP:
+        elif event.type == base.pgl.MOUSEBUTTONUP and event.button == 1:
             sc["gun"].pullback()
 
     # Camera controls shenanigans

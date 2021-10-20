@@ -142,7 +142,7 @@ class Dummy(Creature):
 class MovingEnemy(Creature):
     horizontal_speed: int = 1
 
-    def __init__(self, name: str, pos: Point, hp: int = 1):
+    def __init__(self, name: str, pos: Point, score: 10, hp: int = 1):
         if not name in game.assets.spritesheets:
             sheet = loader.Spritesheet(game.assets.images[name])
             side = 32 * shared.sprite_scale
@@ -155,7 +155,7 @@ class MovingEnemy(Creature):
             hitbox=Rect(80, 80, 80, 80),
             pos=pos,
             hp=hp,
-            score=10,
+            score=score,
         )
 
         self.direction = Direction.right
@@ -196,12 +196,13 @@ class Walker(MovingEnemy):
         super().__init__(
             name="walker",
             pos=pos,
+            score=10,
         )
 
 
 @enemy
 class Bat(MovingEnemy):
-    horizontal_speed: int = 6
+    horizontal_speed: int = 8
 
     def __init__(self, pos: Point):
         # Not the best way to handle different spawn heights, but will do for now
@@ -211,6 +212,7 @@ class Bat(MovingEnemy):
         super().__init__(
             name="bat",
             pos=pos,
+            score=20,
         )
 
 
