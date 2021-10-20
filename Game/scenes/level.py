@@ -89,6 +89,8 @@ def init():
 
     sc.enemy_counter = 0
     sc.enemy_storage = []
+    sc.bullets_amount = 7
+    sc.reloading = False
 
 
 @sc.mgr.timed_task("spawn_enemies", 1000)
@@ -152,11 +154,46 @@ def remove_dead():
     sc.enemy_counter = len(sc.enemy_storage)
 
 
+@sc.mgr.do_later(1000)
+def do_reload():
+    for _, bullet in sc["player_hud"]["bullets"]:
+        bullet.show()
+    sc.bullets_amount = 7
+    sc.reloading = False
+
+
+def reload():
+    log.debug("Reloading a gun")
+    sc.reloading = True
+    game.assets.sounds["reload"].play()
+    do_reload()
+
+
+def attack():
+    if sc.reloading:
+        # game.assets.sounds["busy"].play()
+        return
+
+    if sc.bullets_amount > 0:
+        sc.bullets_amount -= 1
+        sc["player_hud"]["bullets"][f"bullets_{sc.bullets_amount}"].hide()
+        sc["gun"].attack(sc.enemy_storage)
+    else:
+        reload()
+
+
 @sc.updatemethod
 def updater():
     for event in game.event_handler.events:
+        if (
+            not sc.reloading
+            and event.type == base.pgl.KEYDOWN
+            and event.key == base.pgl.K_r
+        ):
+            reload()
+
         if event.type == base.pgl.MOUSEBUTTONDOWN and event.button == 1:
-            sc["gun"].attack(sc.enemy_storage)
+            attack()
         elif event.type == base.pgl.MOUSEBUTTONUP and event.button == 1:
             sc["gun"].pullback()
 
