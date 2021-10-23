@@ -103,7 +103,7 @@ def init_mm():
         tree["menu_wrapper"]["main_menu"].show()
         tree["menu_wrapper"].hide()
         # Now we should proceed to game without issues
-        tree["pause_screen"].show()
+        tree["level"].show()
 
     back_button = make_button(
         name="back_button",

@@ -1,7 +1,7 @@
-from WGF.nodes import VisualNode, Group, Scene
+from WGF.nodes import VisualNode, Group, Scene, Node
 from WGF import Point, game, RGB, Size, tree, base, camera, shared
 from WGF.tasks import TaskManager
-from Game.entities import enemies, Grass, Mountains, Gun
+from Game.entities import enemies, Grass, Mountains, Gun, MousePointer
 from pygame import Surface, key
 from random import choice, randint
 from enum import Enum
@@ -19,13 +19,17 @@ class CameraDirection(Enum):
     stop: int = 0
 
 
+# Level wrapper, to which both scene layout and pause menu will be attached
+level = Node(name="level")
+
 shared.bg_size = Size(2560, 720)
 bg = Surface(shared.bg_size).convert()
 bg.fill(RGB.from_hex("cbdbfc"))
 
-screen_bottom = game.screen.get_rect().bottom
+screen_size = game.screen.get_rect()
+screen_bottom = screen_size.bottom
 
-sc = Scene(name="level", background=bg)
+sc = Scene(name="level_scene", background=bg)
 # Initializing per-scene task manager, to avoid issues with spawning things
 # while game is paused
 sc.mgr = TaskManager()
@@ -214,3 +218,69 @@ def updater():
     sc.mgr.update()
 
     remove_dead()
+
+
+pause_menu = Scene(name="pause_menu", background=bg)
+
+
+@level.initmethod
+def configure_level():
+    level.add_child(sc)
+    level.add_child(pause_menu, show=False)
+
+    def pause():
+        sc.pause()
+        shared.game_paused = True
+        pause_menu.show()
+
+    def play():
+        sc.play()
+        shared.game_paused = False
+        pause_menu.hide()
+
+    level.pause_game = pause
+    level.continue_game = play
+
+    pause_title = ui.make_text(
+        name="pause_msg",
+        text="Game Paused",
+        pos=Point(screen_size.centerx, screen_size.centery - 70),
+    )
+
+    continue_button = ui.make_button(
+        name="continue_button",
+        text="Continue",
+        pos=Point(screen_size.centerx, screen_size.centery),
+        clickmethod=level.continue_game,
+    )
+
+    pause_menu.add_child(pause_title)
+    pause_menu.add_child(continue_button)
+    pause_menu.add_child(MousePointer())
+
+    pause_menu.buttons = (continue_button,)
+
+
+@level.updatemethod
+def update_wrapper():
+    for event in game.event_handler.events:
+        if event.type == base.pgl.KEYDOWN:
+            if event.key == base.pgl.K_p:
+                if shared.game_paused:
+                    level.continue_game()
+                else:
+                    level.pause_game()
+
+
+@pause_menu.showmethod
+def show_pause():
+    pause_menu["gun"].pullback()
+
+
+@pause_menu.updatemethod
+def update_pause():
+    for event in game.event_handler.events:
+        if event.type == base.pgl.MOUSEBUTTONDOWN and event.button == 1:
+            pause_menu["gun"].attack(pause_menu.buttons)
+        elif event.type == base.pgl.MOUSEBUTTONUP and event.button == 1:
+            pause_menu["gun"].pullback()

@@ -58,12 +58,29 @@ def make_game() -> GameWindow:
     # Specifying font as shared variable, since it should be used in all scenes
     shared.font = mygame.assets.load_font("./Assets/Fonts/romulus.ttf", 36)
 
-    from Game.scenes import logo, level, menus, meta
+    shared.game_paused = False
 
-    meta.pause_wrapper.add_child(level.sc)
+    from WGF.nodes import Align
+    from WGF import Point
+    from Game.ui import make_text
+
+    fps_counter = make_text(
+        name="fps_counter",
+        text="",
+        pos=Point(mygame.screen.get_rect().width, 0),
+        align=Align.topright,
+    )
+
+    @fps_counter.updatemethod
+    def update_fps():
+        if not shared.game_paused:
+            fps_counter.text = f"FPS: {mygame.clock.get_fps():2.0f}"
+
+    from Game.scenes import logo, level, menus
+
     mygame.tree.add_child(logo.sc)
     mygame.tree.add_child(menus.mm_wrapper, show=False)
-    mygame.tree.add_child(meta.pause_wrapper, show=False)
-    mygame.tree.add_child(meta.fps_counter, show=mygame.settings["show_fps"])
+    mygame.tree.add_child(level.level, show=False)
+    mygame.tree.add_child(fps_counter, show=mygame.settings["show_fps"])
 
     return mygame

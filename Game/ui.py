@@ -6,13 +6,20 @@ import logging
 log = logging.getLogger(__name__)
 
 
-def make_button(name: str, text: str, pos: Point, active: bool = True) -> Button:
+def make_button(
+    name: str,
+    text: str,
+    pos: Point,
+    clickmethod: callable = None,
+    active: bool = True,
+) -> Button:
     return Button(
         name=name,
         text=text,
         font=shared.font,
         antialiasing=False,
         color=RGB(0, 0, 0) if active else RGB.from_hex("222034"),
+        clickmethod=clickmethod,
         pos=pos,
     )
 
