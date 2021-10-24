@@ -80,7 +80,7 @@ def make_game() -> GameWindow:
 
     mygame.tree.add_child(logo.sc)
     mygame.tree.add_child(menus.mm_wrapper, show=False)
-    mygame.tree.add_child(level.level, show=False)
+    mygame.tree.add_child(level.sc, show=False)
     mygame.tree.add_child(fps_counter, show=mygame.settings["show_fps"])
 
     return mygame
