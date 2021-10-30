@@ -1,4 +1,4 @@
-from WGF.nodes import Scene, Button, Node, VisualNode
+from WGF.nodes import Scene, Button, Node, VisualNode, Group, Align
 from WGF import Point, game, tree, RGB, base, task_mgr, shared
 from pygame import Surface
 from Game.entities import MousePointer
@@ -49,8 +49,12 @@ def init_mm():
         name="score_button",
         text="High Scores",
         pos=Point(gr.centerx, gr.centery + 60),
-        active=False,
     )
+
+    @score_button.clickmethod
+    def show_lb():
+        log.debug("Switching to leaderboard")
+        mm_wrapper.switch("leaderboard_menu")
 
     exit_button = make_button(
         name="exit_button",
@@ -67,6 +71,7 @@ def init_mm():
 
     @main_menu.showmethod
     def show_mm():
+        mm_wrapper.context = "main_menu"
         mm_wrapper.buttons = tuple(x for x in main_menu.children if type(x) is Button)
 
 
@@ -162,6 +167,7 @@ def init_pause():
 
     @giveup_button.clickmethod
     def giveup():
+        tree["level"].end_level()
         tree["menu_wrapper"].switch("gameover_menu")
 
     for item in (pause_title, continue_button, giveup_button):
@@ -193,15 +199,26 @@ def configure_gameover():
         name="restart_button",
         text="Restart",
         pos=Point(gr.centerx, gr.centery),
-        active=False,
     )
+
+    @restart_button.clickmethod
+    def restart_level():
+        log.debug("Restarting the level")
+        # tree["level"].stop()
+        tree["level"].init()
+        tree["menu_wrapper"].hide()
+        tree["level"].show()
 
     lb_button = make_button(
         name="lb_button",
         text="High Scores",
         pos=Point(gr.centerx, gr.centery + 30),
-        active=False,
     )
+
+    @lb_button.clickmethod
+    def show_lb():
+        log.debug("Switching to leaderboard")
+        mm_wrapper.switch("leaderboard_menu")
 
     exit_button = make_button(
         name="exit_button",
@@ -212,7 +229,7 @@ def configure_gameover():
     @exit_button.clickmethod
     def exit_level():
         log.debug("Switching to main menu")
-        tree["level"].stop()
+        # tree["level"].stop()
         tree["menu_wrapper"].switch("main_menu")
 
     for item in (go_title, restart_button, lb_button, exit_button):
@@ -220,9 +237,80 @@ def configure_gameover():
 
     @gameover_menu.showmethod
     def show_gameover():
+        mm_wrapper.context = "gameover_menu"
         mm_wrapper.buttons = tuple(
             x for x in gameover_menu.children if type(x) is Button
         )
+
+
+lb_menu = Node(name="leaderboard_menu")
+
+
+@lb_menu.initmethod
+def configure_leaderboard():
+    title = make_text(
+        name="lb_msg",
+        text="Leaderboard",
+        pos=Point(gr.centerx, gr.centery - 70),
+    )
+
+    back_button = make_button(
+        name="back_button",
+        text="Back to Menu",
+        pos=Point(gr.centerx, gr.centery + 160),
+    )
+
+    @back_button.clickmethod
+    def back():
+        log.debug("Switching to {mm_wrapper.context}")
+        mm_wrapper.switch(mm_wrapper.context)
+
+    # This isnt really performant, but I couldnt find a better way to organize
+    # columns
+    def make_columns(entries: tuple, name: str, height: int):
+        xpos = gr.centerx - 450
+        entry = Group(name)
+        for column in entries:
+            ctext = make_text(name="column", text=column, pos=Point(xpos, height))
+            xpos += 200
+            entry.add_child(ctext)
+
+        return entry
+
+    column_titles = make_columns(
+        entries=("N", "Player", "Score", "Kills", "Mode"),
+        name="column_titles",
+        height=gr.centery - 30,
+    )
+
+    for item in (title, column_titles, back_button):
+        lb_menu.add_child(item)
+
+    @lb_menu.showmethod
+    def show_lb():
+        # for now, it only supports one board #TODO
+        if "endless" in shared.leaderboard:
+            entries = Group(name="lb_entries")
+            height = gr.centery
+            for num, item in enumerate(shared.leaderboard["endless"], start=1):
+                mode = "endless"
+                entry = make_columns(
+                    entries=(
+                        str(num),
+                        str(item["name"]),
+                        str(item["score"]),
+                        str(item["kills"]),
+                        mode,
+                    ),
+                    name=f"column_{num}",
+                    height=height,
+                )
+
+                height += 30
+                entries.add_child(entry)
+            lb_menu.add_child(entries)
+
+        mm_wrapper.buttons = tuple(x for x in lb_menu.children if type(x) is Button)
 
 
 @mm_wrapper.showmethod
@@ -264,10 +352,12 @@ def add_submenus(current: str, menus: tuple):
 
 @mm_wrapper.initmethod
 def init_mm_wrapper():
+    # menu to switch to from "back" button of leaderboard. Its jank, I know
+    mm_wrapper.context = "main_menu"
     mm_wrapper.add_child(game_logo)
     add_submenus(
         current="main_menu",
-        menus=(main_menu, mode_selection, pause_menu, gameover_menu),
+        menus=(main_menu, mode_selection, pause_menu, gameover_menu, lb_menu),
     )
     mm_wrapper.add_child(author_txt)
     mm_wrapper.add_child(MousePointer())

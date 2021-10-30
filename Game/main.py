@@ -1,10 +1,38 @@
-from WGF import GameWindow, AssetsLoader
+from WGF import GameWindow, AssetsLoader, shared
 from os.path import join
 import logging
 
 log = logging.getLogger(__name__)
 
 SETTINGS_PATH = join(".", "settings.toml")
+LEADERBOARD_PATH = join(".", "leaderboard.json")
+
+
+def load_leaderboard():
+    if getattr(shared, "leaderboard", None) is None:
+        from Game.leaderboard import Leaderboard
+
+        try:
+            lb = Leaderboard.from_file(LEADERBOARD_PATH)
+        except Exception as e:
+            log.warning(f"Unable to load leaderboard: {e}")
+            # Creating default lb, in case our own doesnt exist
+            lb = Leaderboard(
+                {
+                    "endless": [
+                        {"name": "xXx_Gamer_xXx", "score": 500, "kills": 69},
+                        {"name": "amogus", "score": 300, "kills": 50},
+                        {"name": "Gabriel", "score": 100, "kills": 20},
+                        {"name": "Default", "score": 50, "kills": 10},
+                        {"name": "Karen", "score": 10, "kills": 1},
+                    ]
+                },
+                path=LEADERBOARD_PATH,
+            )
+            lb.to_file()
+
+        shared.leaderboard = lb
+    return shared.leaderboard
 
 
 def make_game() -> GameWindow:
@@ -40,7 +68,9 @@ def make_game() -> GameWindow:
 
     mygame.assets.spritesheets = {}
 
-    from WGF import shared
+    # from WGF import shared
+
+    load_leaderboard()
 
     # This is kinda janky, but also kinda not?
     shared.sprite_scale = 4

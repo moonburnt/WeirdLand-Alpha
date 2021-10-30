@@ -252,3 +252,22 @@ def updater():
     sc.mgr.update()
 
     remove_dead()
+
+
+def end_level():
+    shared.leaderboard.add_entry(
+        score=shared.score,
+        kills=shared.kill_counter,
+        # #TODO: add support for other game modes and customizable player name
+        mode="endless",
+    )
+    # I should probably restructure this thing #TODO
+    try:
+        shared.leaderboard.to_file()
+    except Exception as e:
+        log.warning(f"Unable to save leaderboard: {e}")
+
+    sc.stop()
+
+
+sc.end_level = end_level
