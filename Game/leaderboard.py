@@ -8,7 +8,10 @@ class Leaderboard:
     def __init__(self, leaderboard: dict, path=None, sort: bool = True):
         if sort:
             for mode in leaderboard:
-                leaderboard[mode].sort(key=(lambda x: x["score"]), reverse=True)
+                leaderboard[mode]["entries"].sort(
+                    key=(lambda x: x["score"]),
+                    reverse=True,
+                )
         self.lb = leaderboard
         self.path = path
 
@@ -42,7 +45,11 @@ class Leaderboard:
         username: str = "player",
         limit: int = 5,
     ):
-        board = self.lb[mode]
+        if not mode in self.lb:
+            self.lb[mode] = {}
+            self.lb[mode]["slug"] = mode
+            self.lb[mode]["entries"] = []
+        board = self.lb[mode]["entries"]
         pos = 0
         if board:
             if score < board[-1]["score"]:
@@ -60,4 +67,4 @@ class Leaderboard:
         data["kills"] = kills
 
         board.insert(pos, data)
-        self.lb[mode] = board[:limit]
+        board = board[:limit]

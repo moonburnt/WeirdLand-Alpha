@@ -1,6 +1,6 @@
 from WGF.nodes import VisualNode, Group, Scene, Node, Button
 from WGF import Point, game, RGB, Size, tree, base, camera, shared
-from WGF.tasks import TaskManager
+from WGF.tasks import TaskManager, Timer
 from Game.entities import enemies, Grass, Mountains, Gun, MousePointer
 from pygame import Surface, key
 from random import choice, randint
@@ -14,25 +14,77 @@ log = logging.getLogger(__name__)
 
 # It cant be the same as entity Direction, coz its values are inverted
 class CameraDirection(Enum):
-    left: int = 1
-    right: int = -1
-    stop: int = 0
+    left = 1
+    right = -1
+    stop = 0
 
 
-# Level wrapper, to which both scene layout and pause menu will be attached
-# level = Node(name="level")
+class GameMode(Enum):
+    endless = 0
+    time_attack = 1
+    survival = 2
 
-shared.bg_size = Size(2560, 720)
-bg = Surface(shared.bg_size).convert()
-bg.fill(RGB.from_hex("cbdbfc"))
+
+class Level(Scene):
+    def __init__(self, mode: GameMode, size: Size = Size(2560, 720)):
+        shared.bg_size = size
+        bg = Surface(shared.bg_size).convert()
+        bg.fill(RGB.from_hex("cbdbfc"))
+        super().__init__(name="level", background=bg)
+        self.mode = mode
+        # Initializing per-scene task manager, to avoid issues with spawning things
+        # while game is paused
+        self.mgr = TaskManager()
+        # shared.lvl = self #idk if this makes sense
+
+    def end_level(self):
+        shared.leaderboard.add_entry(
+            score=shared.score,
+            kills=shared.kill_counter,
+            # #TODO: add support for customizable player name
+            mode=self.mode.name,
+        )
+        # I should probably restructure this thing #TODO
+        try:
+            shared.leaderboard.to_file()
+        except Exception as e:
+            log.warning(f"Unable to save leaderboard: {e}")
+
+        tree["menu_wrapper"].switch("gameover_menu")
+        self.stop()
+        tree["menu_wrapper"].show()
+
+    def restart(self):
+        self.stop()
+        self.init()
+
 
 screen_size = game.screen.get_rect()
 screen_bottom = screen_size.bottom
 
-sc = Scene(name="level", background=bg)
-# Initializing per-scene task manager, to avoid issues with spawning things
-# while game is paused
-sc.mgr = TaskManager()
+sc = Level(mode=GameMode.endless)
+
+
+lvl_countdown = ui.make_text(
+    name="lvl_countdown",
+    text="",
+    pos=Point(game.screen.get_rect().width / 2, 15),
+)
+
+
+@lvl_countdown.initmethod
+def init_countdown():
+    lvl_countdown.timer = Timer(30000)
+
+
+@lvl_countdown.updatemethod
+def update_countdown():
+    if lvl_countdown.timer.update():
+        sc.end_level()
+    else:
+        lvl_countdown.text = str(int(lvl_countdown.timer.time_left / 1000)).rjust(
+            5, "0"
+        )
 
 
 @sc.initmethod
@@ -102,6 +154,15 @@ def init():
     sc.first_run = True
     shared.pause_button_pressed = False
 
+    if sc.mode is GameMode.time_attack:
+        lvl_countdown.stop()
+        lvl_countdown.init()
+        sc["lvl_countdown"] = lvl_countdown
+    # This is jank, but will do for now
+    else:
+        if "lvl_countdown" in sc._children:
+            sc._children.pop("lvl_countdown")
+
 
 @sc.mgr.timed_task("spawn_enemies", 1000)
 def spawn():
@@ -150,10 +211,10 @@ def unpress_pause():
 
 @sc.showmethod
 def show():
-    camera.pos.x = -game.screen.get_rect().width / 2
-    spawn()
     unpress_pause()
     if sc.first_run:
+        camera.pos.x = -game.screen.get_rect().width / 2
+        spawn()
         sc["encourage_msg"].show()
         hide_msg()
         sc.first_run = False
@@ -252,22 +313,3 @@ def updater():
     sc.mgr.update()
 
     remove_dead()
-
-
-def end_level():
-    shared.leaderboard.add_entry(
-        score=shared.score,
-        kills=shared.kill_counter,
-        # #TODO: add support for other game modes and customizable player name
-        mode="endless",
-    )
-    # I should probably restructure this thing #TODO
-    try:
-        shared.leaderboard.to_file()
-    except Exception as e:
-        log.warning(f"Unable to save leaderboard: {e}")
-
-    sc.stop()
-
-
-sc.end_level = end_level

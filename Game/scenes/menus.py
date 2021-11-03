@@ -3,6 +3,7 @@ from WGF import Point, game, tree, RGB, base, task_mgr, shared
 from pygame import Surface
 from Game.entities import MousePointer
 from Game.ui import make_button, make_text
+from Game.scenes.level import GameMode
 import logging
 
 log = logging.getLogger(__name__)
@@ -20,6 +21,23 @@ def switch(name: str):
     for menu in mm_wrapper.menus:
         menu.hide()
     mm_wrapper[name].show()
+
+
+# This isnt really performant, but I couldnt find a better way to organize
+# columns
+def make_columns(entries: list, name: str, height: int, distance: int = 200) -> Group:
+    xpos = gr.centerx - int(len(entries) / 2) * distance
+    # This is garbage, but it should keep things somehow centered regardless if
+    # amount of columns is even or odd
+    if len(entries) % 2 == 0:
+        xpos += int(distance * 0.5)
+    entry = Group(name)
+    for column in entries:
+        column.pos = Point(xpos, height)
+        xpos += distance
+        entry.add_child(column)
+
+    return entry
 
 
 mm_wrapper.switch = switch
@@ -86,13 +104,19 @@ def init_mm():
         pos=Point(gr.centerx, gr.centery - 70),
     )
 
-    # #Not implemented yet #TODO
     ta_button = make_button(
         name="ta_button",
         text="Time Attack",
         pos=Point(gr.centerx, gr.centery),
-        active=False,
     )
+
+    @ta_button.clickmethod
+    def play_ta():
+        log.debug("Switching to level in time attack mode")
+        tree["level"].mode = GameMode.time_attack
+        tree["level"].init()
+        tree["menu_wrapper"].hide()
+        tree["level"].show()
 
     # #Not implemented yet #TODO
     surv_button = make_button(
@@ -110,7 +134,8 @@ def init_mm():
 
     @en_button.clickmethod
     def play():
-        log.debug("Switching to level")
+        log.debug("Switching to level in endless mode")
+        tree["level"].mode = GameMode.endless
         tree["level"].init()
         tree["menu_wrapper"].hide()
         tree["level"].show()
@@ -168,7 +193,7 @@ def init_pause():
     @giveup_button.clickmethod
     def giveup():
         tree["level"].end_level()
-        tree["menu_wrapper"].switch("gameover_menu")
+        # tree["menu_wrapper"].switch("gameover_menu")
 
     for item in (pause_title, continue_button, giveup_button):
         pause_menu.add_child(item)
@@ -204,8 +229,7 @@ def configure_gameover():
     @restart_button.clickmethod
     def restart_level():
         log.debug("Restarting the level")
-        # tree["level"].stop()
-        tree["level"].init()
+        tree["level"].restart()
         tree["menu_wrapper"].hide()
         tree["level"].show()
 
@@ -248,8 +272,10 @@ lb_menu = Node(name="leaderboard_menu")
 
 @lb_menu.initmethod
 def configure_leaderboard():
+    lb_menu.show_mode = "endless"
+
     title = make_text(
-        name="lb_msg",
+        name="leaderboard_title",
         text="Leaderboard",
         pos=Point(gr.centerx, gr.centery - 70),
     )
@@ -257,7 +283,7 @@ def configure_leaderboard():
     back_button = make_button(
         name="back_button",
         text="Back to Menu",
-        pos=Point(gr.centerx, gr.centery + 160),
+        pos=Point(gr.centerx, gr.centery + 210),
     )
 
     @back_button.clickmethod
@@ -265,52 +291,94 @@ def configure_leaderboard():
         log.debug("Switching to {mm_wrapper.context}")
         mm_wrapper.switch(mm_wrapper.context)
 
-    # This isnt really performant, but I couldnt find a better way to organize
-    # columns
-    def make_columns(entries: tuple, name: str, height: int):
-        xpos = gr.centerx - 450
-        entry = Group(name)
-        for column in entries:
-            ctext = make_text(name="column", text=column, pos=Point(xpos, height))
-            xpos += 200
-            entry.add_child(ctext)
-
-        return entry
-
+    ct = [
+        make_text(name="column", text=x, pos=Point(0, 0))
+        for x in ("N", "Player", "Score", "Kills")
+    ]
     column_titles = make_columns(
-        entries=("N", "Player", "Score", "Kills", "Mode"),
+        entries=ct,
         name="column_titles",
+        height=gr.centery,
+    )
+
+    mode_endless = make_button(
+        name="mode_endless",
+        text="Endless",
+        pos=Point(0, 0),
+    )
+
+    @mode_endless.clickmethod
+    def show_endless():
+        lb_menu.show_mode = "endless"
+        update_shown()
+
+    mode_ta = make_button(
+        name="mode_time_attack",
+        text="Time Attack",
+        pos=Point(0, 0),
+    )
+
+    @mode_ta.clickmethod
+    def show_endless():
+        lb_menu.show_mode = "time_attack"
+        update_shown()
+
+    mode_survival = make_button(
+        name="mode_survival",
+        text="Survival",
+        pos=Point(0, 0),
+        active=False,
+    )
+
+    mode_buttons = make_columns(
+        entries=[mode_ta, mode_survival, mode_endless],
+        name="mode_buttons",
         height=gr.centery - 30,
     )
 
-    for item in (title, column_titles, back_button):
+    for item in (title, mode_buttons, column_titles, back_button):
         lb_menu.add_child(item)
 
-    @lb_menu.showmethod
-    def show_lb():
-        # for now, it only supports one board #TODO
-        if "endless" in shared.leaderboard:
+    def update_shown():
+        if lb_menu.show_mode in shared.leaderboard:
+            mode = shared.leaderboard[lb_menu.show_mode]
+            lb_menu["leaderboard_title"].text = f"Leaderboard: {mode['slug']}"
             entries = Group(name="lb_entries")
-            height = gr.centery
-            for num, item in enumerate(shared.leaderboard["endless"], start=1):
-                mode = "endless"
-                entry = make_columns(
-                    entries=(
+            height = gr.centery + 30
+            for num, item in enumerate(mode["entries"], start=1):
+                titles = [
+                    make_text(name="column", text=x, pos=Point(0, 0))
+                    for x in (
                         str(num),
                         str(item["name"]),
                         str(item["score"]),
                         str(item["kills"]),
-                        mode,
-                    ),
+                    )
+                ]
+                entry = make_columns(
+                    entries=titles,
                     name=f"column_{num}",
                     height=height,
                 )
 
                 height += 30
                 entries.add_child(entry)
-            lb_menu.add_child(entries)
+        else:
+            lb_menu["leaderboard_title"].text = f"Leaderboard: {lb_menu.show_mode}"
+            entries = make_text(
+                name="lb_entries",
+                text="No Data Available",
+                pos=Point(gr.centerx, gr.centery + 30),
+            )
+        lb_menu.add_child(entries)
 
-        mm_wrapper.buttons = tuple(x for x in lb_menu.children if type(x) is Button)
+    @lb_menu.showmethod
+    def show_lb():
+        update_shown()
+
+        buttons = [x for x in lb_menu.children if type(x) is Button]
+        buttons.extend([x for x in mode_buttons.children if type(x) is Button])
+        mm_wrapper.buttons = buttons
 
 
 @mm_wrapper.showmethod

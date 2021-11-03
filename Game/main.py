@@ -17,16 +17,33 @@ def load_leaderboard():
         except Exception as e:
             log.warning(f"Unable to load leaderboard: {e}")
             # Creating default lb, in case our own doesnt exist
-            lb = Leaderboard(
-                {
-                    "endless": [
-                        {"name": "xXx_Gamer_xXx", "score": 500, "kills": 69},
+            board = {
+                # #TODO: for now, entries are placeholders and dont match actual
+                # score/kills values you can get in game
+                "endless": {
+                    "slug": "Endless",
+                    "entries": [
+                        {"name": "xXx_Gamer_xXx", "score": 720, "kills": 69},
                         {"name": "amogus", "score": 300, "kills": 50},
                         {"name": "Gabriel", "score": 100, "kills": 20},
                         {"name": "Default", "score": 50, "kills": 10},
                         {"name": "Karen", "score": 10, "kills": 1},
-                    ]
+                    ],
                 },
+                "time_attack": {
+                    "slug": "Time Attack",
+                    "entries": [
+                        {"name": "Top_Kek", "score": 300, "kills": 50},
+                        {"name": "loss", "score": 200, "kills": 30},
+                        {"name": "Someone", "score": 150, "kills": 25},
+                        {"name": "Amanda", "score": 75, "kills": 13},
+                        {"name": "123asd123", "score": 10, "kills": 1},
+                    ],
+                },
+            }
+
+            lb = Leaderboard(
+                leaderboard=board,
                 path=LEADERBOARD_PATH,
             )
             lb.to_file()
@@ -103,14 +120,15 @@ def make_game() -> GameWindow:
 
     @fps_counter.updatemethod
     def update_fps():
-        if not shared.game_paused:
-            fps_counter.text = f"FPS: {mygame.clock.get_fps():2.0f}"
+        # if not shared.game_paused:
+        fps_counter.text = f"FPS: {mygame.clock.get_fps():2.0f}"
 
     from Game.scenes import logo, level, menus
 
     mygame.tree.add_child(logo.sc)
     mygame.tree.add_child(menus.mm_wrapper, show=False)
     mygame.tree.add_child(level.sc, show=False)
+    level.sc.stop()
     mygame.tree.add_child(fps_counter, show=mygame.settings["show_fps"])
 
     return mygame
