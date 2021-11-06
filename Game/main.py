@@ -7,13 +7,15 @@ log = logging.getLogger(__name__)
 SETTINGS_PATH = join(".", "settings.toml")
 LEADERBOARD_PATH = join(".", "leaderboard.json")
 
+LB_LIMIT = 5
+
 
 def load_leaderboard():
     if getattr(shared, "leaderboard", None) is None:
         from Game.leaderboard import Leaderboard
 
         try:
-            lb = Leaderboard.from_file(LEADERBOARD_PATH)
+            lb = Leaderboard.from_file(LEADERBOARD_PATH, limit=LB_LIMIT)
         except Exception as e:
             log.warning(f"Unable to load leaderboard: {e}")
             # Creating default lb, in case our own doesnt exist
@@ -45,6 +47,7 @@ def load_leaderboard():
             lb = Leaderboard(
                 leaderboard=board,
                 path=LEADERBOARD_PATH,
+                limit=LB_LIMIT,
             )
             lb.to_file()
 

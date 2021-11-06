@@ -1,4 +1,4 @@
-from WGF.nodes import VisualNode, Group, Scene, Node, Button
+from WGF.nodes import VisualNode, Group, Scene, Node, Button, TextNode
 from WGF import Point, game, RGB, Size, tree, base, camera, shared
 from WGF.tasks import TaskManager, Timer
 from Game.entities import enemies, Grass, Mountains, Gun, MousePointer
@@ -59,32 +59,45 @@ class Level(Scene):
         self.init()
 
 
+class Countdown(TextNode):
+    def __init__(
+        self,
+        ms: int,
+        timeout_func: callable,
+        name: str = "countdown",
+        pos=None,
+        max_text_len: int = 0,
+    ):
+        self.time = ms
+        self.timer = Timer(self.time)
+        self.text_len = max_text_len or len(str(int(ms / 1000)))
+        self.timeout_func = timeout_func
+
+        super().__init__(
+            name=name,
+            text="asda",
+            font=shared.font,
+            antialiasing=False,
+            pos=pos,
+        )
+
+    def restart(self):
+        self.timer.restart()
+
+    def update(self):
+        if self.timer.update():
+            self.timeout_func()
+            return
+
+        # Yep, this would be tiny bit faster than doing f"{(stuff):.0f}"
+        self.text = str(int(self.timer.time_left / 1000)).rjust(self.text_len, "0")
+        super().update()
+
+
 screen_size = game.screen.get_rect()
 screen_bottom = screen_size.bottom
 
 sc = Level(mode=GameMode.endless)
-
-
-lvl_countdown = ui.make_text(
-    name="lvl_countdown",
-    text="",
-    pos=Point(game.screen.get_rect().width / 2, 15),
-)
-
-
-@lvl_countdown.initmethod
-def init_countdown():
-    lvl_countdown.timer = Timer(30000)
-
-
-@lvl_countdown.updatemethod
-def update_countdown():
-    if lvl_countdown.timer.update():
-        sc.end_level()
-    else:
-        lvl_countdown.text = str(int(lvl_countdown.timer.time_left / 1000)).rjust(
-            5, "0"
-        )
 
 
 @sc.initmethod
@@ -155,9 +168,15 @@ def init():
     shared.pause_button_pressed = False
 
     if sc.mode is GameMode.time_attack:
-        lvl_countdown.stop()
-        lvl_countdown.init()
-        sc["lvl_countdown"] = lvl_countdown
+        if "lvl_countdown" in sc._children:
+            sc["lvl_countdown"].restart()
+        else:
+            sc["lvl_countdown"] = Countdown(
+                ms=30000,
+                timeout_func=sc.end_level,
+                name="lvl_countdown",
+                pos=Point(screen_size.width / 2, 15),
+            )
     # This is jank, but will do for now
     else:
         if "lvl_countdown" in sc._children:

@@ -5,13 +5,17 @@ log = logging.getLogger(__name__)
 
 
 class Leaderboard:
-    def __init__(self, leaderboard: dict, path=None, sort: bool = True):
+    def __init__(self, leaderboard: dict, path=None, sort: bool = True, limit: int = 0):
         if sort:
             for mode in leaderboard:
                 leaderboard[mode]["entries"].sort(
                     key=(lambda x: x["score"]),
                     reverse=True,
                 )
+                if limit:
+                    leaderboard[mode]["entries"] = leaderboard[mode]["entries"][:limit]
+
+        self.limit = limit
         self.lb = leaderboard
         self.path = path
 
@@ -23,11 +27,11 @@ class Leaderboard:
         return self.lb[key]
 
     @classmethod
-    def from_file(cls, path):
+    def from_file(cls, path, sort: bool = True, limit: int = 0):
         with open(path, "r") as f:
             data = json.load(f)
         log.debug(f"Successfully loaded leaderboard from {path}")
-        return cls(data, path=path)
+        return cls(data, path=path, sort=sort, limit=limit)
 
     def to_file(self, path=None):
         path = path or self.path
@@ -43,8 +47,10 @@ class Leaderboard:
         kills: int,
         mode: str,
         username: str = "player",
-        limit: int = 5,
+        limit: int = 0,
     ):
+        limit = limit or self.limit
+
         if not mode in self.lb:
             self.lb[mode] = {}
             self.lb[mode]["slug"] = mode
@@ -67,4 +73,5 @@ class Leaderboard:
         data["kills"] = kills
 
         board.insert(pos, data)
-        board = board[:limit]
+        if limit:
+            self.lb[mode]["entries"] = board[:limit]
