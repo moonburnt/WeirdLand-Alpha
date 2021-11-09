@@ -220,10 +220,21 @@ def configure_gameover():
         pos=Point(gr.centerx, gr.centery - 70),
     )
 
+    last_score = make_text(
+        name="last_score",
+        text="",
+        pos=Point(gr.centerx, gr.centery - 30),
+    )
+    last_kills = make_text(
+        name="last_kills",
+        text="",
+        pos=Point(gr.centerx, gr.centery),
+    )
+
     restart_button = make_button(
         name="restart_button",
         text="Restart",
-        pos=Point(gr.centerx, gr.centery),
+        pos=Point(gr.centerx, gr.centery + 70),
     )
 
     @restart_button.clickmethod
@@ -236,7 +247,7 @@ def configure_gameover():
     lb_button = make_button(
         name="lb_button",
         text="High Scores",
-        pos=Point(gr.centerx, gr.centery + 30),
+        pos=Point(gr.centerx, gr.centery + 100),
     )
 
     @lb_button.clickmethod
@@ -247,7 +258,7 @@ def configure_gameover():
     exit_button = make_button(
         name="exit_button",
         text="Back to Menu",
-        pos=Point(gr.centerx, gr.centery + 60),
+        pos=Point(gr.centerx, gr.centery + 130),
     )
 
     @exit_button.clickmethod
@@ -256,7 +267,14 @@ def configure_gameover():
         # tree["level"].stop()
         tree["menu_wrapper"].switch("main_menu")
 
-    for item in (go_title, restart_button, lb_button, exit_button):
+    for item in (
+        go_title,
+        last_score,
+        last_kills,
+        restart_button,
+        lb_button,
+        exit_button,
+    ):
         gameover_menu.add_child(item)
 
     @gameover_menu.showmethod
@@ -266,13 +284,16 @@ def configure_gameover():
             x for x in gameover_menu.children if type(x) is Button
         )
 
+        last_score.text = f"You've scored {shared.score} points"
+        last_kills.text = f"and killed {shared.kill_counter} enemies!"
+
 
 lb_menu = Node(name="leaderboard_menu")
 
 
 @lb_menu.initmethod
 def configure_leaderboard():
-    lb_menu.show_mode = "endless"
+    lb_menu.show_mode = None
 
     title = make_text(
         name="leaderboard_title",
@@ -340,6 +361,9 @@ def configure_leaderboard():
         lb_menu.add_child(item)
 
     def update_shown():
+        if not lb_menu.show_mode:
+            lb_menu.show_mode = tree["level"].mode.name
+
         if lb_menu.show_mode in shared.leaderboard:
             mode = shared.leaderboard[lb_menu.show_mode]
             lb_menu["leaderboard_title"].text = f"Leaderboard: {mode['slug']}"
@@ -374,6 +398,7 @@ def configure_leaderboard():
 
     @lb_menu.showmethod
     def show_lb():
+        lb_menu.show_mode = None
         update_shown()
 
         buttons = [x for x in lb_menu.children if type(x) is Button]
