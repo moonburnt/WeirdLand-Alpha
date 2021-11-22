@@ -185,19 +185,30 @@ def init():
 
 @sc.mgr.timed_task("spawn_enemies", 1000)
 def spawn():
-    # log.debug("Attempting to spawn enemies")
     if sc.enemy_counter <= 10:
-        pos = Point(
-            # This should solve the issue with enemies spawning outside of screen
-            randint(0, shared.bg_size.width - 150),
-            # #TODO: I should probably make height's offset dynamic, based on
-            # window's height - to provide same results with different resolutions
-            screen_bottom - 220,
-        )
-        enemy_type = choice(list(enemies))
-        log.debug(f"Spawning {enemy_type} at {pos}")
-        enemy = enemies[enemy_type](pos=pos)
+        log.debug("Attempting to spawn enemy")
+        chance = randint(0, 100)
+        group_name = 100
+        if not chance in enemies:
+            for num in sorted(enemies):
+                if num >= chance:
+                    group_name = num
+                    break
+        else:
+            group_name = chance
+
+        log.debug(f"Rolled {chance}, spawning enemy from group {group_name}")
+
+        if not enemies[group_name]:
+            log.warning(f"Group {group_name} has no creatures in it!")
+            return
+
+        group = enemies[group_name]
+        enemy_type = choice(tuple(group))
+        log.debug(f"Spawning {enemy_type}")
+        enemy = group[enemy_type]()
         sc["enemies"].add_child(enemy)
+        enemy.spawn()
         sc.enemy_counter += 1
 
 
@@ -248,6 +259,8 @@ def move_cam(direction: CameraDirection):
 
 
 def remove_dead():
+    # maybe I should patch it to allow for two enemy storages to exist at once -
+    # one for stuff that spawns below front grass, other - for stuff above #TODO
     for k, v in tuple(sc["enemies"]):
         if v.remove:
             del sc["enemies"][k]

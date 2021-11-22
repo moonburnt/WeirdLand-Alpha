@@ -3,7 +3,7 @@ from WGF import game, loader, shared, Point, task_mgr
 from WGF.nodes import VisualNode, Cursor, Node
 from WGF.tasks import Animation
 from enum import Enum
-from random import choice
+from random import choice, randint
 import logging
 
 log = logging.getLogger(__name__)
@@ -14,17 +14,24 @@ class Direction(Enum):
     right: int = 1
 
 
+# #TODO: overhaul this thing - specify spawn chance
 enemies = {}
 
 
-def enemy(cls):
-    name = cls.__name__
-    enemies[name] = cls
+def enemy(spawn_chance: int = 100):
+    def wrapper(cls):
+        if not spawn_chance in enemies:
+            enemies[spawn_chance] = {}
 
-    def inner(*args, **kwargs):
-        return enemies[name](*args, **kwargs)
+        name = cls.__name__
+        enemies[spawn_chance][name] = cls
 
-    return inner
+        def inner(*args, **kwargs):
+            return enemies[spawn_chance][name](*args, **kwargs)
+
+        return inner
+
+    return wrapper
 
 
 def get_explosion():
@@ -37,30 +44,34 @@ def get_explosion():
     return choice(game.assets.spritesheets["explosion"])
 
 
-# class Creature(VisualNode):
 class Creature(Node):
     def __init__(
         self,
         name: str,
         surface,
         hitbox: Rect,
-        pos: Point,
         hp: int,
         distance: float = 1.0,
         score: int = 10,
     ):
         super().__init__(name=name)
 
+        # Fallback pos required for VisualNode instances to initialize
+        # This shouldnt be actually used, since for logic to start working,
+        # entity must be spawn()'ed, and spawn() logic implies overriding pos for
+        # both visuals and explosion
+        self._pos = Point(0, 0)
+
         self.visuals = VisualNode(
             name=f"{name}_visuals",
             surface=surface,
-            pos=pos,
+            pos=self._pos,
             distance=distance,
         )
         self.explosion = VisualNode(
             name=f"{name}_death",
             surface=get_explosion(),
-            pos=pos,
+            pos=self._pos,
             distance=distance,
         )
         self.add_child(self.visuals)
@@ -74,6 +85,25 @@ class Creature(Node):
         # now, since animations would need to update these each frame
         self.hitbox = hitbox
         self.remove = False
+
+        self.hide()
+
+    @property
+    def pos(self):
+        return self._pos
+
+    @pos.setter
+    def pos(self, pos: Point):
+        self._pos = pos
+        self.visuals.pos = self._pos
+        self.explosion.pos = self._pos
+
+    def spawn(self, pos: Point):
+        """Spawn creature.
+        Different creatures override this with calling super() at the end,
+        for different spawn mechanics"""
+        self.pos = pos
+        self.show()
 
     def _updatemethod(self):
         self.hitbox.centerx = self.visuals.rect.centerx
@@ -126,23 +156,32 @@ class Mountains(VisualNode):
         )
 
 
-@enemy
+@enemy()
 class Dummy(Creature):
-    def __init__(self, pos: Point, hp: int = 1):
+    def __init__(self, hp: int = 1):
         super().__init__(
             name="dummy",
             surface=game.assets.images["dummy"],
             hitbox=Rect(80, 80, 80, 80),
-            pos=pos,
             hp=hp,
             score=5,
         )
+
+    def spawn(self):
+        pos = Point(
+            # This should solve the issue with enemies spawning outside of screen
+            randint(0, shared.bg_size.width - 150),
+            # #TODO: I should probably make height's offset dynamic, based on
+            # window's height - to provide same results with different resolutions
+            game.screen.get_rect().bottom - 220,
+        )
+        super().spawn(pos)
 
 
 class MovingEnemy(Creature):
     horizontal_speed: int = 1
 
-    def __init__(self, name: str, pos: Point, score: 10, hp: int = 1):
+    def __init__(self, name: str, score: 10, hp: int = 1):
         if not name in game.assets.spritesheets:
             sheet = loader.Spritesheet(game.assets.images[name])
             side = 32 * shared.sprite_scale
@@ -153,7 +192,6 @@ class MovingEnemy(Creature):
             name=name,
             surface=self.animation[0],
             hitbox=Rect(80, 80, 80, 80),
-            pos=pos,
             hp=hp,
             score=score,
         )
@@ -188,32 +226,76 @@ class MovingEnemy(Creature):
         self.hitbox.centery = self.visuals.rect.centery
 
 
-@enemy
+@enemy()
 class Walker(MovingEnemy):
     horizontal_speed: int = 4
 
-    def __init__(self, pos: Point):
+    def __init__(self):
         super().__init__(
             name="walker",
-            pos=pos,
             score=10,
         )
 
+    def spawn(self):
+        pos = Point(
+            randint(0, shared.bg_size.width - 150),
+            game.screen.get_rect().bottom - 220,
+        )
+        super().spawn(pos)
 
-@enemy
+
+@enemy()
 class Bat(MovingEnemy):
     horizontal_speed: int = 8
 
-    def __init__(self, pos: Point):
-        # Not the best way to handle different spawn heights, but will do for now
-        # #TODO
-        pos.y -= 400
-
+    def __init__(self):
         super().__init__(
             name="bat",
-            pos=pos,
             score=20,
         )
+
+    def spawn(self):
+        pos = Point(
+            randint(0, shared.bg_size.width - 150),
+            # Not the best way to handle different spawn heights, but will do
+            # #TODO
+            game.screen.get_rect().bottom - 620,
+        )
+        super().spawn(pos)
+
+
+# Not ready yet, thus wont be added to enemy roster #TODO
+# @enemy()
+class Chomper(Creature):
+    def __init__(self):
+        name = "chomper"
+        if not name in game.assets.spritesheets:
+            sheet = loader.Spritesheet(game.assets.images[name])
+            side = 32 * shared.sprite_scale
+            game.assets.spritesheets[name] = sheet.get_sprites((side, side))
+        self.animation = Animation(game.assets.spritesheets[name])
+
+        print("Chomp!")
+        super().__init__(
+            name=name,
+            surface=self.animation[0],
+            hitbox=Rect(80, 80, 80, 80),
+            hp=1,
+            score=30,
+            distance=0.0,
+        )
+
+    def spawn(self):
+        scr = game.screen.get_rect()
+        pos = Point(randint(40, scr.width), scr.bottom - 40)
+        super().spawn(pos)
+
+    # def _updatemethod(self):
+    #    if self.alive:
+    #        self.chomp()
+
+    # def chomp(self):
+    #    pass
 
 
 # Its has weird naming, coz I wanted actual weapon to inherit from it
