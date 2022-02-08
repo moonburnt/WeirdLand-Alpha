@@ -1,0 +1,10 @@
+If I remember correctly, all sounds are licensed under CC0 and came from 
+this collection: 
+https://opengameart.org/content/512-sound-effects-8-bit-style
+
+Font is romulus by pix3m, licensed under CC-BY 3.0 and downloaded from there:
+https://opengameart.org/content/pixel-fonts-by-pix3m
+
+All sprites were made by myself, moonburnt - and, for the time being, are to 
+be used only in WeirdLand. However, if you are interested - just let me know 
+and I may re-license them (I just don't see any point right now).
