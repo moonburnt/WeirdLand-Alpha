@@ -2,19 +2,19 @@
 
 ## Description:
 
-**WeirdLand** is a WIP arcade shooting game, heavily inspired by Moorhuhn. 
-Visually, I've tried to recreate the aestetics of NES/SNES-inspired flash/XBLA 
+**WeirdLand** is a WIP arcade shooting game, heavily inspired by Moorhuhn.
+Visually, I've tried to recreate the aestetics of NES/SNES-inspired flash/XBLA
 games (hopefully it was somewhat successfull).
 
 ## Project Status:
 
-Demo. For now, there are still plenty of things left to implement, but basics are 
+Demo. For now, there are still plenty of things left to implement, but basics are
 kind of there.
 
 ## TODO:
 
 - At least 5 enemy types (3 already implemented).
-- Random environment events (rare creatures that spawn once in eternity, meteors, 
+- Random environment events (rare creatures that spawn once in eternity, meteors,
 explosives that can clean whole map, etc).
 - Achievements. Well... maybe?
 - Native game's binary for windows. Maybe also for mac os.
@@ -31,11 +31,11 @@ explosives that can clean whole map, etc).
 - Run build.sh:
 `chmod +x ./build.sh && ./build.sh`
 
-If everything has went successfully, you will get game's binary in 
+If everything has went successfully, you will get game's binary in
 **./build/WeirdLand/{name-of-platform}/**
 
 ## License:
 
-TODO.
+[GPLv3](LICENSE)
 
 For licenses of media used in this game - check [Assets/license.txt](/Assets/license.txt)
