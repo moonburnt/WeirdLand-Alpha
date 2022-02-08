@@ -24,29 +24,31 @@ dep_check() {
     fi
 }
 
+error() {
+	echo "$1"
+	exit 1
+}
+
 game_name="WeirdLand"
 build_dir="./build/$game_name/linux"
 cache_dir="./.temp"
 assets_dir="./Assets"
 icon_file="./icon.png"
-WGF_dir="./WGF"
 venv=".venv/bin/activate"
 
-dir_check $WGF_dir
 dir_check $assets_dir
 file_check $icon_file
 file_check $venv
 dep_check pip
 
-# #TODO: safety checks that will shutdown further execution on failure of any line
 source $venv
 pip install -r requirements.txt
 pip install -r dev-requirements.txt
 
 dep_check pyinstaller
 
-pyinstaller Game/run.py --onefile --noconsole --clean --workpath $cache_dir --distpath $build_dir --name $game_name
-cp -r ./Assets $build_dir
-cp ./icon.png $build_dir
+pyinstaller Game/run.py --onefile --noconsole --clean --workpath $cache_dir --distpath $build_dir --name $game_name || error "Build error. Abort."
+cp -r ./Assets $build_dir || error "Unable to copy game's assets. Abort."
+cp ./icon.png $build_dir || error "Unable to copy game's icon. Abort."
 
 echo "Successfully finished building $game_name!"
