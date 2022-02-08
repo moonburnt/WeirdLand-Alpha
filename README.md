@@ -11,6 +11,10 @@ games (hopefully it was somewhat successfull).
 Demo. For now, there are still plenty of things left to implement, but basics are
 kind of there.
 
+## Gameplay Preview:
+
+[Gameplay Video](https://user-images.githubusercontent.com/52989889/153038045-c25038f2-1993-4e57-9014-8efdfa268f62.mp4)
+
 ## TODO:
 
 - At least 5 enemy types (3 already implemented).
