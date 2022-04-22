@@ -1,5 +1,7 @@
 # WeirdLand
 
+[![Build](https://github.com/moonburnt/WeirdLand/actions/workflows/build.yml/badge.svg)](https://github.com/moonburnt/WeirdLand/actions/workflows/build.yml)
+
 ## Description:
 
 **WeirdLand** is a WIP arcade shooting game, heavily inspired by Moorhuhn.
@@ -21,7 +23,6 @@ kind of there.
 - Random environment events (rare creatures that spawn once in eternity, meteors,
 explosives that can clean whole map, etc).
 - Achievements. Well... maybe?
-- Native game's binary for windows. Maybe also for mac os.
 
 ## Building Game Natively:
 
@@ -30,8 +31,6 @@ explosives that can clean whole map, etc).
 - cd into game's directory
 - Create virtual environment inside:
 `virtualenv .venv && source .venv/bin/activate`
-- Install game's requirements and dev requirements:
-`pip install -r requirements.txt && pip install -r dev-requirements.txt`
 - Run build.sh:
 `chmod +x ./build.sh && ./build.sh`
 
